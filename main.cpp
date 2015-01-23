@@ -39,6 +39,8 @@ int main(int argc, char* argv[])
 	sf::Vector2f pos {0.f, 0.f};
 	sf::RectangleShape rect {sf::Vector2f {40.f, 40.f}};
 
+	sf::Clock timer;
+
 	bool running = true;
 	while (running)
 	{
@@ -87,6 +89,8 @@ int main(int argc, char* argv[])
 		target.clear(background);
 		target.draw(rect);
 		target.display();
+
+		fx.setParameter("time", timer.getElapsedTime().asSeconds());
 
 		window.clear();
 		window.draw(sf::Sprite {target.getTexture()}, &fx);
