@@ -1,16 +1,29 @@
-#include <stdlib.h>
-#include <time.h>
+#include <cstdlib>
+#include <ctime>
+#include <iostream>
 
 #include <SFML/Graphics.hpp>
+
+using std::rand;
 
 int main(int argc, char* argv[])
 {
 	sf::RenderWindow window {sf::VideoMode {800, 600}, "Test"};
 
-	srand(time(nullptr));
+	sf::RenderTexture target;
+	if (!target.create(800, 600))
+	{
+		std::cerr << "Failed to create render texture\n";
+		return -1;
+	}
+
+	std::srand(time(nullptr));
 
 	sf::Color background {0, 0, 0};
 	sf::Color new_color {0, 0, 0};
+
+	sf::Vector2f pos {0.f, 0.f};
+	sf::RectangleShape rect {sf::Vector2f {40.f, 40.f}};
 
 	bool running = true;
 	while (running)
@@ -21,6 +34,19 @@ int main(int argc, char* argv[])
 			if (event.type == sf::Event::Closed)
 				running = false;
 		}
+
+		sf::Vector2f dir {0.f, 0.f};
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+			dir.x -= 1.f;
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+			dir.x += 1.f;
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+			dir.y -= 1.f;
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+			dir.y += 1.f;
+
+		pos += dir * 4.f;
+		rect.setPosition(pos);
 
 		// pick new background color if we're there
 		if (new_color == background)
@@ -44,7 +70,12 @@ int main(int argc, char* argv[])
 		else if (new_color.b > background.b)
 			background.b += rand() % 2;
 
-		window.clear(background);
+		target.clear(background);
+		target.draw(rect);
+		target.display();
+
+		window.clear();
+		window.draw(sf::Sprite {target.getTexture()});
 		window.display();
 	}
 
