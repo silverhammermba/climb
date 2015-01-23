@@ -14,8 +14,22 @@ int main(int argc, char* argv[])
 	if (!target.create(800, 600))
 	{
 		std::cerr << "Failed to create render texture\n";
-		return -1;
+		return 1;
 	}
+
+	if (!sf::Shader::isAvailable())
+	{
+		std::cerr << "Shaders not available\n";
+		return 1;
+	}
+
+	sf::Shader fx;
+	if (!fx.loadFromFile("fragment.glsl", sf::Shader::Fragment))
+	{
+		std::cerr << "Failed to load fragment shader\n";
+		return 1;
+	}
+	fx.setParameter("texture", sf::Shader::CurrentTexture);
 
 	std::srand(time(nullptr));
 
@@ -75,7 +89,7 @@ int main(int argc, char* argv[])
 		target.display();
 
 		window.clear();
-		window.draw(sf::Sprite {target.getTexture()});
+		window.draw(sf::Sprite {target.getTexture()}, &fx);
 		window.display();
 	}
 
