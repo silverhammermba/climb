@@ -495,6 +495,7 @@ int main(int argc, char* argv[])
 				float last_highest = highest_point;
 				int last_size = points.size();
 				bool new_high = false;
+				// generate 1-4 more points
 				int new_points = rand() % 4 + 1;
 
 				while (points.size() - last_size < new_points)
@@ -505,8 +506,8 @@ int main(int argc, char* argv[])
 						float theta = (4.f * (rand() / (float)RAND_MAX) + 1.f) * M_PI / -6.f;
 						sf::Vector2f p {point->pos().x + cosf(theta) * easy_dist, point->pos().y + sinf(theta) * easy_dist};
 
-						// want it in bounds and at least one point higher than the previous (and not lower than intro points)
-						if (p.y < last_highest && p.y < winh - 800.f && p.x > 0.f && p.x < winw)
+						// want it in bounds and at least one point higher than the previous
+						if (p.y < last_highest && p.x > 0.f && p.x < winw)
 						{
 							// make sure it isn't too close to other points
 							bool bad = false;
@@ -527,6 +528,7 @@ int main(int argc, char* argv[])
 									new_high = true;
 									highest_point = p.y;
 								}
+								// need to break because iterator is invalid now
 								break;
 							}
 						}
