@@ -32,22 +32,35 @@ sf::Vector2f normv(const sf::Vector2f& v)
 	return v / norm(v);
 }
 
-class Grapple
+class Grappable
 {
+protected:
 	sf::Vector2f position;
-	sf::CircleShape circle;
 public:
-	Grapple(float x, float y)
-		: position {x, y}, circle {10.f}
-	{
-		circle.setOrigin(10.f, 10.f);
-		circle.setPosition(position);
-		circle.setFillColor(sf::Color {0, 0, 255});
-	}
+	Grappable(float x, float y)
+		: position {x, y}
+	{}
+
+	Grappable(const sf::Vector2f& v)
+		: position {v}
+	{}
 
 	inline const sf::Vector2f& pos() const
 	{
 		return position;
+	}
+};
+
+class Grapple : public Grappable
+{
+	sf::CircleShape circle;
+public:
+	Grapple(float x, float y)
+		: Grappable {x, y}, circle {10.f}
+	{
+		circle.setOrigin(10.f, 10.f);
+		circle.setPosition(position);
+		circle.setFillColor(sf::Color {0, 0, 255});
 	}
 
 	void draw_on(sf::RenderTexture& target)
@@ -56,13 +69,12 @@ public:
 	}
 };
 
-class Swinger
+class Swinger : Grappable
 {
-	sf::Vector2f position;
 	sf::RectangleShape rectangle;
 	sf::ConvexShape aimbox;
 
-	int grapple_target = -1;
+	Grappable* grapple_target = nullptr;
 	// 0 = not grappling, 1 = moving toward point, 2 = swingin'
 	int grappling = 0;
 	float swing_dir = 1.f;
@@ -78,7 +90,7 @@ class Swinger
 	float aiming = false;
 public:
 	Swinger(float x, float y)
-		: position {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}
+		: Grappable {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}
 	{
 		rectangle.setOrigin(20.f, 20.f);
 
@@ -97,25 +109,25 @@ public:
 		return grappling != 0;
 	}
 
-	inline int target() const
+	inline Grappable* target() const
 	{
 		return grapple_target;
 	}
 
-	void target(int new_target)
+	void target(Grappable* new_target)
 	{
 		grapple_target = new_target;
-		if (grapple_target >= 0)
+		if (grapple_target)
 			grappling = 1;
 	}
 
-	void grapple(const std::vector<Grapple>& grapples)
+	void grapple()
 	{
 		// nothing to do if not grappling
-		if (grapple_target < 0)
+		if (!grapple_target)
 			return;
 
-		float d2 = dist2(position, grapples[grapple_target].pos());
+		float d2 = dist2(position, grapple_target->pos());
 		// need to move towards grapple
 		if (d2 > grap_dist2)
 		{
@@ -125,7 +137,7 @@ public:
 			if (speed < min_pull_speed)
 				speed = min_pull_speed;
 
-			position += normv(grapples[grapple_target].pos() - position) * speed;
+			position += normv(grapple_target->pos() - position) * speed;
 		}
 		// if we're close enough, start swinging
 		else if (grappling == 1)
@@ -136,21 +148,21 @@ public:
 		// if swinging
 		if (grappling == 2)
 		{
-			float theta = atan2f(position.y - grapples[grapple_target].pos().y, position.x - grapples[grapple_target].pos().x);
+			float theta = atan2f(position.y - grapple_target->pos().y, position.x - grapple_target->pos().x);
 
 			float speed = sinf(theta) * swing_speed_factor / grap_dist;
 
 			// you're swinging too high, swing back towards middle
 			if (speed < min_swing_speed)
 			{
-				swing_dir = (position.x - grapples[grapple_target].pos().x) / std::abs(position.x - grapples[grapple_target].pos().x);
+				swing_dir = (position.x - grapple_target->pos().x) / std::abs(position.x - grapple_target->pos().x);
 				speed = min_swing_speed;
 			}
 
 			theta += swing_dir * speed;
 
-			position.x = cosf(theta) * grap_dist + grapples[grapple_target].pos().x;
-			position.y = sinf(theta) * grap_dist + grapples[grapple_target].pos().y;
+			position.x = cosf(theta) * grap_dist + grapple_target->pos().x;
+			position.y = sinf(theta) * grap_dist + grapple_target->pos().y;
 		}
 	}
 
@@ -225,9 +237,12 @@ int main(int argc, char* argv[])
 				running = false;
 			if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::Space)
 			{
-				if (p1.target() >= 0)
+				if (p1.is_grappling())
 				{
-					p1.target(1 - p1.target());
+					if (p1.target() == &grapples[0])
+						p1.target(&grapples[1]);
+					else
+						p1.target(&grapples[0]);
 				}
 			}
 		}
@@ -244,9 +259,9 @@ int main(int argc, char* argv[])
 		{
 			// grapple
 			if (!p1.is_grappling())
-				p1.target(0);
+				p1.target(&grapples[0]);
 
-			p1.grapple(grapples);
+			p1.grapple();
 
 			last_frame_time -= game_step;
 		}
