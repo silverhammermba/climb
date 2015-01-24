@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <list>
 #include <vector>
 
 #include <SFML/Graphics.hpp>
@@ -234,7 +235,7 @@ public:
 	}
 
 	// aim and find nearest grapple to aim
-	float aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::vector<Point*>& points)
+	float aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::list<Point*>& points)
 	{
 		float theta = atan2f(dir.y, dir.x);
 		aimbox.setRotation(rad2deg(theta));
@@ -409,7 +410,7 @@ int main(int argc, char* argv[])
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
 
-		std::vector<Point*> points;
+		std::list<Point*> points;
 		points.push_back(new Point {1.f * winw / 3.f, winh - 400.f});
 		points.push_back(new Point {2.f * winw / 3.f, winh - 400.f});
 		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 500.f});
@@ -461,6 +462,22 @@ int main(int argc, char* argv[])
 					players[i]->aim(aim, players, points);
 				else
 					players[i]->stop_aim();
+			}
+
+			// remove points that are off the bottom
+			for (auto it = points.begin(); it != points.end();)
+			{
+				if ((*it)->pos().y > camera.getCenter().y + camera.getSize().y / 2.f)
+				{
+					for (auto& player : players)
+					{
+						if (player->target() == *it)
+							player->let_go();
+					}
+					it = points.erase(it);
+				}
+				else
+					++it;
 			}
 
 			// generate level if the highest point is on the screen
