@@ -106,8 +106,8 @@ class Swinger : Grappable
 	float max_grap_dist2;
 	float grap_dist;
 
-	float pull_speed_factor = 0.04f;
-	float min_pull_speed = 1.f;
+	float pull_speed_factor = 0.004f;
+	float min_pull_speed = 0.04f;
 
 	float aiming = false;
 
@@ -131,11 +131,10 @@ public:
 		reticle.setOutlineColor(sf::Color {255, 0, 0});
 		reticle.setOutlineThickness(2.f);
 
-		aimbox.setPointCount(4);
+		aimbox.setPointCount(3);
 		aimbox.setPoint(0, sf::Vector2f{40, 50});
-		aimbox.setPoint(1, sf::Vector2f{300, 60});
-		aimbox.setPoint(2, sf::Vector2f{300, -60});
-		aimbox.setPoint(3, sf::Vector2f{40, -50});
+		aimbox.setPoint(1, sf::Vector2f{300, 0});
+		aimbox.setPoint(2, sf::Vector2f{40, -50});
 		aimbox.setFillColor(sf::Color {255, 255, 0, 50});
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
@@ -167,9 +166,21 @@ public:
 			velocity += gravity * (float)game_step;
 			position += velocity * (float)game_step;
 
+			if (position.x > winw - 20.f)
+			{
+				position.x = winw - 20.f;
+				velocity.x = velocity.x / -2.f;
+			}
+			else if (position.x < 20.f)
+			{
+				position.x = 20.f;
+				velocity.x = velocity.x / -2.f;
+			}
+
 			// don't fall through floor
 			if (position.y > winh - 20.f)
 			{
+				velocity.x = 0.f;
 				velocity.y = 0.f;
 				position.y = winh - 20.f;
 			}
@@ -186,7 +197,9 @@ public:
 			if (speed < min_pull_speed)
 				speed = min_pull_speed;
 
-			position += normv(grapple_target->pos() - position) * speed;
+			velocity = normv(grapple_target->pos() - position) * speed;
+
+			position += velocity * (float)game_step;
 		}
 		// if we're close enough, start swinging
 		else if (grappling == 1)
@@ -209,7 +222,8 @@ public:
 
 			// naive velocity/position update
 			swing_vel += dot(gravity, grap_perpn) * (float)game_step;
-			position += grap_perpn * swing_vel * (float)game_step;
+			velocity = grap_perpn * swing_vel;
+			position += velocity * (float)game_step;
 
 			// force position into grapple distance
 			sf::Vector2f delta = position - grapple_target->pos();
@@ -318,6 +332,13 @@ public:
 			target(nearest);
 	}
 
+	void let_go()
+	{
+		grappling = 0;
+		grapple_target = nullptr;
+		return;
+	}
+
 	void draw_on(sf::RenderTexture& render_target)
 	{
 		rectangle.setPosition(position);
@@ -401,11 +422,14 @@ int main(int argc, char* argv[])
 					running = false;
 					restart = false;
 				}
-				if (event.type == sf::Event::JoystickButtonPressed && event.joystickButton.button == 0)
+				if (event.type == sf::Event::JoystickButtonPressed)
 				{
 					if (event.joystickButton.joystickId < players.size())
 					{
-						players[event.joystickButton.joystickId]->grapple();
+						if (event.joystickButton.button == 0)
+							players[event.joystickButton.joystickId]->grapple();
+						else if (event.joystickButton.button == 1)
+							players[event.joystickButton.joystickId]->let_go();
 					}
 				}
 				if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::R)
