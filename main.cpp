@@ -188,7 +188,7 @@ public:
 	}
 
 	// aim and find nearest grapple to aim
-	float aim(const sf::Vector2f& dir, std::vector<Grapple>& grapples)
+	float aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::vector<Grapple*>& grapples)
 	{
 		float theta = atan2f(dir.y, dir.x);
 		aimbox.setRotation(rad2deg(theta));
@@ -197,24 +197,54 @@ public:
 		nearest = nullptr;
 		float ndist2;
 
-		for (auto& grapple : grapples)
+		for (auto& player : players)
 		{
-			if (dot(grapple.pos(), position) <= 0.f)
+			// can't grapple self
+			if (player == this)
 				continue;
-			if (dist2(grapple.pos(), position) > max_grapple_dist2)
+			// can't grapple someone grappling self
+			if (player->target() == this)
 				continue;
 
-			float num = dir.y * grapple.pos().x - dir.x * grapple.pos().y + position.y * (position.x + dir.x) - position.x * (position.y + dir.y);
-			float ldist2 = (num * num) / norm2(dir);
+			float ldist2 = dist2line(dir, player->pos());
+			if (ldist2 < 0.f)
+				continue;
 
 			if (nearest == nullptr || ldist2 < ndist2)
 			{
-				nearest = &grapple;
+				nearest = player;
+				ndist2 = ldist2;
+			}
+		}
+
+		for (auto& grapple : grapples)
+		{
+			float ldist2 = dist2line(dir, grapple->pos());
+			if (ldist2 < 0.f)
+				continue;
+
+			if (nearest == nullptr || ldist2 < ndist2)
+			{
+				nearest = grapple;
 				ndist2 = ldist2;
 			}
 		}
 
 		return theta;
+	}
+
+	// return distance squared from p to the ray from position to position+dir (or -1 if not near ray)
+	float dist2line(const sf::Vector2f& dir, const sf::Vector2f& p)
+	{
+		if (dot(p, position) <= 0.f)
+			return -1.f;
+		if (dist2(p, position) > max_grapple_dist2)
+			return -1.f;
+
+		float num = dir.y * p.x - dir.x * p.y + position.y * (position.x + dir.x) - position.x * (position.y + dir.y);
+		float ldist2 = (num * num) / norm2(dir);
+
+		return ldist2;
 	}
 
 	void gogo()
@@ -223,21 +253,21 @@ public:
 			target(nearest);
 	}
 
-	void draw_on(sf::RenderTexture& target)
+	void draw_on(sf::RenderTexture& render_target)
 	{
 		rectangle.setPosition(position);
-		target.draw(rectangle);
+		render_target.draw(rectangle);
 
 		if (aiming)
 		{
 			aimbox.setPosition(position);
-			target.draw(aimbox);
+			render_target.draw(aimbox);
 			aiming = false;
 
 			if (nearest)
 			{
 				reticle.setPosition(nearest->pos());
-				target.draw(reticle);
+				render_target.draw(reticle);
 			}
 		}
 	}
@@ -285,10 +315,10 @@ int main(int argc, char* argv[])
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
 
-		std::vector<Grapple> grapples;
-		grapples.emplace(grapples.end(), winw / 3.f, winh / 2.f - 100.f);
-		grapples.emplace(grapples.end(), 2.f * winw / 3.f, winh / 2.f - 100.f);
-		grapples.emplace(grapples.end(), winw / 2.f, winh / 2.f - 50.f);
+		std::vector<Grapple*> grapples;
+		grapples.push_back(new Grapple {winw / 3.f, winh / 2.f - 100.f});
+		grapples.push_back(new Grapple {2.f * winw / 3.f, winh / 2.f - 100.f});
+		grapples.push_back(new Grapple {winw / 2.f, winh / 2.f - 50.f});
 
 		bool running = true;
 		while (running)
@@ -321,7 +351,7 @@ int main(int argc, char* argv[])
 				// deadzone check
 				if (norm(aim) > 50.f)
 				{
-					float theta = players[i]->aim(aim, grapples);
+					float theta = players[i]->aim(aim, players, grapples);
 				}
 			}
 
@@ -336,7 +366,7 @@ int main(int argc, char* argv[])
 			// draw on render texture
 			target.clear(background);
 			for (auto& grapple : grapples)
-				grapple.draw_on(target);
+				grapple->draw_on(target);
 			for (auto& player : players)
 				player->draw_on(target);
 			target.display();
@@ -351,6 +381,12 @@ int main(int argc, char* argv[])
 			last_frame_time += frame_timer.getElapsedTime().asMilliseconds();
 			frame_timer.restart();
 		}
+
+		// cleanup
+		for (auto& player : players)
+			delete player;
+		for (auto& grapple : grapples)
+			delete grapple;
 	}
 
 	return 0;
