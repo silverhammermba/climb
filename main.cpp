@@ -59,6 +59,7 @@ int main(int argc, char* argv[])
 
 	sf::Vector2f pos {winw / 2.f - 20.f, winh - 40.f};
 	sf::RectangleShape rect {sf::Vector2f {40.f, 40.f}};
+	rect.setOrigin(20.f, 0.f);
 
 	sf::Clock timer;
 	sf::Clock frame_timer;
@@ -69,10 +70,10 @@ int main(int argc, char* argv[])
 	grapples.push_back(sf::Vector2f {winw / 3.f, winh / 2.f - 100.f});
 	grapples.push_back(sf::Vector2f {2.f * winw / 3.f, winh / 2.f - 100.f});
 	std::vector<sf::CircleShape> gcircs;
-	gcircs.emplace(gcircs.end(), 20.f);
-	gcircs.emplace(gcircs.end(), 20.f);
 	for (int i = 0; i < grapples.size(); ++i)
 	{
+		gcircs.emplace(gcircs.end(), 10.f);
+		gcircs[i].setOrigin(10.f, 10.f);
 		gcircs[i].setPosition(grapples[i]);
 		gcircs[i].setFillColor(sf::Color {0, 0, 255});
 	}
@@ -84,6 +85,11 @@ int main(int argc, char* argv[])
 
 	float grap_dist = 100.f;
 	float grap_dist2 = grap_dist * grap_dist;
+
+	float pull_speed_factor = 0.04f;
+	float min_pull_speed = 1.f;
+	float swing_speed_factor = 0.1f;
+	float min_swing_speed = 0.03f;
 
 	bool running = true;
 	while (running)
@@ -126,9 +132,12 @@ int main(int argc, char* argv[])
 			// need to move towards grapple
 			if (d2 > grap_dist2)
 			{
-				float speed = sqrtf(d2 - grap_dist2) * 0.02f;
-				if (speed < 1.f)
-					speed = 1.f;
+				// pull speed proportional to distance
+				float speed = sqrtf(d2 - grap_dist2) * pull_speed_factor;
+				// until you're close
+				if (speed < min_pull_speed)
+					speed = min_pull_speed;
+
 				pos += normv(grapples[grapple_target] - pos) * speed;
 			}
 			// if we're close enough, start swinging
@@ -142,15 +151,16 @@ int main(int argc, char* argv[])
 			{
 				float theta = atan2f(pos.y - grapples[grapple_target].y, pos.x - grapples[grapple_target].x);
 
-				float speed = sinf(theta);
+				float speed = sinf(theta) * swing_speed_factor;
 
-				if (speed < 0.3f)
+				// you're swinging too high, swing back towards middle
+				if (speed < min_swing_speed)
 				{
 					swing_dir = (pos.x - grapples[grapple_target].x) / std::abs(pos.x - grapples[grapple_target].x);
-					speed = 0.3f;
+					speed = min_swing_speed;
 				}
 
-				theta += swing_dir * speed / 10.f;
+				theta += swing_dir * speed;
 
 				pos.x = cosf(theta) * grap_dist + grapples[grapple_target].x;
 				pos.y = sinf(theta) * grap_dist + grapples[grapple_target].y;
