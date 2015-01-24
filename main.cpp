@@ -28,6 +28,11 @@ float dist2(const sf::Vector2f& p1, const sf::Vector2f& p2)
 	return (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
 }
 
+float dist(const sf::Vector2f& p1, const sf::Vector2f& p2)
+{
+	return sqrtf(dist2(p1, p2));
+}
+
 float norm2(const sf::Vector2f& v)
 {
 	return v.x * v.x + v.y * v.y;
@@ -61,6 +66,11 @@ public:
 	{
 		return position;
 	}
+
+	inline const sf::Vector2f& vel() const
+	{
+		return velocity;
+	}
 };
 
 class Point : public Grappable
@@ -91,20 +101,22 @@ class Swinger : Grappable
 	Grappable* nearest = nullptr;
 	// 0 = not grappling, 1 = moving toward point, 2 = swingin'
 	int grappling = 0;
-	int swing_dir = 1;
 
-	float grap_dist = 200.f;
-	float grap_dist2;
+	float max_grap_dist = 200.f;
+	float max_grap_dist2;
+	float grap_dist;
 
 	float pull_speed_factor = 0.04f;
 	float min_pull_speed = 1.f;
-	float swing_speed_factor = 10.f;
-	float min_base_speed = 0.2f;
 
 	float aiming = false;
 
 	float max_grapple_dist = 500.f;
 	float max_grapple_dist2;
+
+	// velocity in the reference frame of swinging
+	float swing_vel = 0.f;
+	float starting_swing_vel = 0.004f;
 
 	int need_center = 0;
 
@@ -126,7 +138,7 @@ public:
 		aimbox.setPoint(3, sf::Vector2f{40, -50});
 		aimbox.setFillColor(sf::Color {255, 255, 0, 50});
 
-		grap_dist2 = grap_dist * grap_dist;
+		max_grap_dist2 = max_grap_dist * max_grap_dist;
 		max_grapple_dist2 = max_grapple_dist * max_grapple_dist;
 	}
 
@@ -166,10 +178,10 @@ public:
 
 		float d2 = dist2(position, grapple_target->pos());
 		// need to move towards grapple
-		if (d2 > grap_dist2)
+		if (d2 > max_grap_dist2)
 		{
 			// pull speed proportional to distance
-			float speed = sqrtf(d2 - grap_dist2) * pull_speed_factor;
+			float speed = sqrtf(d2 - max_grap_dist2) * pull_speed_factor;
 			// until you're close
 			if (speed < min_pull_speed)
 				speed = min_pull_speed;
@@ -179,19 +191,26 @@ public:
 		// if we're close enough, start swinging
 		else if (grappling == 1)
 		{
+			grap_dist = dist(position, grapple_target->pos());
 			grappling = 2;
 			last_target_pos = grapple_target->pos();
+			swing_vel = (position.x < grapple_target->pos().x ? 1 : -1) * ((position.y - grapple_target->pos().y) + grap_dist) * starting_swing_vel / 2.f;
 		}
 
 		// if swinging
 		if (grappling == 2)
 		{
+			// direction to player
 			sf::Vector2f grap = position - grapple_target->pos();
+			// tanget of swing direction
 			sf::Vector2f grap_perp {grap.y, -grap.x};
+			// normalized
 			sf::Vector2f grap_perpn = normv(grap_perp);
-			sf::Vector2f grap_accel = grap_perpn * dot(gravity, grap_perpn);
-			velocity += grap_accel * (float)game_step;
-			position += velocity * (float)game_step;
+
+			swing_vel += dot(gravity, grap_perpn) * (float)game_step;
+			position += grap_perpn * swing_vel * (float)game_step;
+
+			// force position into grapple distance
 			sf::Vector2f delta = position - grapple_target->pos();
 			position = grapple_target->pos() + delta * (grap_dist / norm(delta));
 
@@ -323,7 +342,7 @@ int main(int argc, char* argv[])
 	std::srand(time(nullptr));
 
 	gravity.x = 0.f;
-	gravity.y = 0.005f;
+	gravity.y = 0.003f;
 
 	bool restart = true;
 	while (restart)
