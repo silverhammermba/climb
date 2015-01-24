@@ -352,17 +352,19 @@ public:
 		return;
 	}
 
+	void draw_rope_on(sf::RenderTexture& render_target)
+	{
+		if (grapple_target == nullptr)
+			return;
+		rope.setSize(sf::Vector2f{dist(position, grapple_target->pos()), 3.f});
+		rope.setPosition(position);
+		sf::Vector2f dir = grapple_target->pos() - position;
+		rope.setRotation(rad2deg(atan2f(dir.y, dir.x)));
+		render_target.draw(rope);
+	}
+
 	void draw_on(sf::RenderTexture& render_target)
 	{
-		if (grapple_target)
-		{
-			rope.setSize(sf::Vector2f{dist(position, grapple_target->pos()), 3.f});
-			rope.setPosition(position);
-			sf::Vector2f dir = grapple_target->pos() - position;
-			rope.setRotation(rad2deg(atan2f(dir.y, dir.x)));
-			render_target.draw(rope);
-		}
-
 		rectangle.setPosition(position);
 		render_target.draw(rectangle);
 	}
@@ -597,6 +599,8 @@ int main(int argc, char* argv[])
 			// draw on render texture
 			render_target.clear(background);
 			render_target.setView(camera);
+			for (auto& player : players)
+				player->draw_rope_on(render_target);
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
