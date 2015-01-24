@@ -456,8 +456,8 @@ int main(int argc, char* argv[])
 		sf::Color background {0, 0, 0};
 
 		std::vector<Swinger*> players;
-		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 300.f, sf::Color {203, 40, 20}});
-		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 300.f, sf::Color {243, 166, 10}});
+		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 20.f, sf::Color {203, 40, 20}});
+		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 20.f, sf::Color {243, 166, 10}});
 
 		sf::Clock timer;
 		game_time = 0.f;
@@ -486,6 +486,9 @@ int main(int argc, char* argv[])
 		points.push_back(new Point {winw / 2.f - 300.f, winh - 1000.f});
 		points.push_back(new Point {winw / 2.f - 150.f, winh - 1000.f});
 
+		sf::RectangleShape bomb {sf::Vector2f{70.f, 30.f}};
+		bomb.setFillColor(sf::Color{180, 180, 180});
+
 		float highest_point = 0.f;
 		for (auto& point : points)
 		{
@@ -493,7 +496,86 @@ int main(int argc, char* argv[])
 				highest_point = point->pos().y;
 		}
 
+		camera.zoom(0.5f);
+		camera.setCenter(winw / 2.f, winh / 2.f + 300.f);
+
 		bool running = true;
+		bool cutscene = true;
+		while (cutscene && running)
+		{
+			// input
+			sf::Event event;
+			while (window.pollEvent(event))
+			{
+				if (event.type == sf::Event::Closed)
+				{
+					running = false;
+					restart = false;
+				}
+				if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::R)
+				{
+					running = false;
+				}
+			}
+			if (sf::Joystick::isButtonPressed(0, 7) && sf::Joystick::isButtonPressed(1, 7))
+				cutscene = false;
+
+			// draw on render texture
+			render_target.clear(background);
+			render_target.setView(camera);
+			for (auto& point : points)
+				point->draw_on(render_target);
+			for (auto& player : players)
+				player->draw_on(render_target);
+
+			// gui
+			render_target.setView(render_target.getDefaultView());
+			render_target.display();
+
+			// draw with full screen effects
+			fx.setParameter("time", game_time);
+
+			window.clear();
+			window.draw(sf::Sprite {render_target.getTexture()}, &fx);
+			window.display();
+
+			last_frame_time += frame_timer.getElapsedTime().asMilliseconds();
+			frame_timer.restart();
+			game_time = timer.getElapsedTime().asSeconds();
+		}
+
+		sf::Clock transition;
+		while (running && transition.getElapsedTime().asSeconds() < 1.f)
+		{
+			float zdiff = render_target.getDefaultView().getSize().x / camera.getSize().x;
+			camera.zoom((zdiff - 1.f) / 2.f + 1.f);
+			camera.move((render_target.getDefaultView().getCenter() - camera.getCenter()) / 3.f);
+
+			// draw on render texture
+			render_target.clear(background);
+			render_target.setView(camera);
+			for (auto& point : points)
+				point->draw_on(render_target);
+			for (auto& player : players)
+				player->draw_on(render_target);
+
+			// gui
+			render_target.setView(render_target.getDefaultView());
+			render_target.display();
+
+			// draw with full screen effects
+			fx.setParameter("time", game_time);
+
+			window.clear();
+			window.draw(sf::Sprite {render_target.getTexture()}, &fx);
+			window.display();
+
+			last_frame_time += frame_timer.getElapsedTime().asMilliseconds();
+			frame_timer.restart();
+			game_time = timer.getElapsedTime().asSeconds();
+		}
+		camera = render_target.getDefaultView();
+
 		while (running)
 		{
 			// input
@@ -694,7 +776,8 @@ int main(int argc, char* argv[])
 
 			// gui
 			render_target.setView(render_target.getDefaultView());
-			render_target.draw(got);
+			if (gameover)
+				render_target.draw(got);
 
 			for (int i = 0; i < players.size(); ++i)
 			{
