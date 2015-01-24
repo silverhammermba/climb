@@ -154,7 +154,6 @@ public:
 		aimbox.setColor(sf::Color {color.r, color.g, color.b, 50});
 
 		rope.setOrigin(0.f, 1.f);
-		rope.setScale(4.f, 4.f);
 		rope.setColor(sf::Color {color.r / 3, color.g / 3, color.b / 3});
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
@@ -380,7 +379,11 @@ public:
 	{
 		if (grapple_target == nullptr)
 			return;
-		//rope.setSize(sf::Vector2f{dist(position, grapple_target->pos()), 3.f});
+
+		auto bounds = rope.getLocalBounds();
+		rope.setScale(4.f, 4.f);
+		rope.setTextureRect(sf::IntRect {0, 0, dist(position, grapple_target->pos()) / 4.f, bounds.height});
+
 		rope.setPosition(position);
 		sf::Vector2f dir = grapple_target->pos() - position;
 		rope.setRotation(rad2deg(atan2f(dir.y, dir.x)));
@@ -472,6 +475,7 @@ int main(int argc, char* argv[])
 	sf::Texture rope_tex;
 	if (!load(rope_tex, "img/rope.png"))
 		return 1;
+	rope_tex.setRepeated(true);
 
 	bool restart = true;
 	while (restart)
