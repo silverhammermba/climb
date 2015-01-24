@@ -399,6 +399,15 @@ public:
 			}
 		}
 	}
+
+	void draw_lives_on(sf::RenderTexture& render_target, int corner)
+	{
+		for (int i = 0; i < lives; ++i)
+		{
+			rectangle.setPosition(sf::Vector2f{corner * winw - (30.f + i * 60.f) * (2 * corner - 1), 30.f});
+			render_target.draw(rectangle);
+		}
+	}
 };
 
 int main(int argc, char* argv[])
@@ -686,6 +695,11 @@ int main(int argc, char* argv[])
 			// gui
 			render_target.setView(render_target.getDefaultView());
 			render_target.draw(got);
+
+			for (int i = 0; i < players.size(); ++i)
+			{
+				players[i]->draw_lives_on(render_target, i);
+			}
 
 			render_target.display();
 
