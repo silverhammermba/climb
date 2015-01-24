@@ -508,7 +508,7 @@ int main(int argc, char* argv[])
 
 		std::vector<Swinger*> players;
 		players.push_back(new Swinger {
-			1.f * winw / 3.f - 20.f,
+			1.f * winw / 3.f,
 			sf::Color {203, 40, 20},
 			avatar_tex,
 			reticle_tex,
@@ -516,7 +516,7 @@ int main(int argc, char* argv[])
 			rope_tex
 		});
 		players.push_back(new Swinger {
-			2.f * winw / 3.f + 20.f,
+			2.f * winw / 3.f,
 			sf::Color {243, 166, 10},
 			avatar_tex,
 			reticle_tex,
