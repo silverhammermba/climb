@@ -272,66 +272,77 @@ int main(int argc, char* argv[])
 
 	std::srand(time(nullptr));
 
-	sf::Color background {0, 0, 0};
-
-	Swinger p1 {winw / 2.f - 20.f, winh - 20.f};
-
-	sf::Clock timer;
-	sf::Clock frame_timer;
-	int last_frame_time = 0;
-
-	std::vector<Grapple> grapples;
-	grapples.emplace(grapples.end(), winw / 3.f, winh / 2.f - 100.f);
-	grapples.emplace(grapples.end(), 2.f * winw / 3.f, winh / 2.f - 100.f);
-	grapples.emplace(grapples.end(), winw / 2.f, winh / 2.f - 50.f);
-
-	bool running = true;
-	while (running)
+	bool restart = true;
+	while (restart)
 	{
-		sf::Event event;
-		while (window.pollEvent(event))
+		sf::Color background {0, 0, 0};
+
+		Swinger p1 {winw / 2.f - 20.f, winh - 20.f};
+
+		sf::Clock timer;
+		sf::Clock frame_timer;
+		int last_frame_time = 0;
+
+		std::vector<Grapple> grapples;
+		grapples.emplace(grapples.end(), winw / 3.f, winh / 2.f - 100.f);
+		grapples.emplace(grapples.end(), 2.f * winw / 3.f, winh / 2.f - 100.f);
+		grapples.emplace(grapples.end(), winw / 2.f, winh / 2.f - 50.f);
+
+		bool running = true;
+		while (running)
 		{
-			if (event.type == sf::Event::Closed)
-				running = false;
-			if (event.type == sf::Event::JoystickButtonPressed && event.joystickButton.button == 0)
+			sf::Event event;
+			while (window.pollEvent(event))
 			{
-				p1.gogo();
+				if (event.type == sf::Event::Closed)
+				{
+					running = false;
+					restart = false;
+				}
+				if (event.type == sf::Event::JoystickButtonPressed && event.joystickButton.button == 0)
+				{
+					p1.gogo();
+				}
+				if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::R)
+				{
+					running = false;
+				}
 			}
+
+			sf::Vector2f aim {sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::Y)};
+
+			// deadzone check
+			if (norm(aim) > 50.f)
+			{
+				float theta = p1.aim(aim, grapples);
+
+				Grappable* nearest = nullptr;
+			}
+
+			while (game_step > 0 && last_frame_time > game_step)
+			{
+				p1.grapple();
+
+				last_frame_time -= game_step;
+			}
+
+			// draw on render texture
+			target.clear(background);
+			for (auto& grapple : grapples)
+				grapple.draw_on(target);
+			p1.draw_on(target);
+			target.display();
+
+			// draw with full screen effects
+			fx.setParameter("time", timer.getElapsedTime().asSeconds());
+
+			window.clear();
+			window.draw(sf::Sprite {target.getTexture()}, &fx);
+			window.display();
+
+			last_frame_time += frame_timer.getElapsedTime().asMilliseconds();
+			frame_timer.restart();
 		}
-
-		sf::Vector2f aim {sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::Y)};
-
-		// deadzone check
-		if (norm(aim) > 50.f)
-		{
-			float theta = p1.aim(aim, grapples);
-
-			Grappable* nearest = nullptr;
-		}
-
-		while (game_step > 0 && last_frame_time > game_step)
-		{
-			p1.grapple();
-
-			last_frame_time -= game_step;
-		}
-
-		// draw on render texture
-		target.clear(background);
-		for (auto& grapple : grapples)
-			grapple.draw_on(target);
-		p1.draw_on(target);
-		target.display();
-
-		// draw with full screen effects
-		fx.setParameter("time", timer.getElapsedTime().asSeconds());
-
-		window.clear();
-		window.draw(sf::Sprite {target.getTexture()}, &fx);
-		window.display();
-
-		last_frame_time += frame_timer.getElapsedTime().asMilliseconds();
-		frame_timer.restart();
 	}
 
 	return 0;
