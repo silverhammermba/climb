@@ -93,7 +93,7 @@ public:
 	}
 };
 
-class Swinger : Grappable
+class Swinger : public Grappable
 {
 	sf::RectangleShape rectangle;
 	sf::RectangleShape reticle;
@@ -517,8 +517,37 @@ int main(int argc, char* argv[])
 					++it;
 			}
 
+			float top = camera.getCenter().y - camera.getSize().y / 2.f;
+
+			for (auto& player : players)
+			{
+				if (player->pos().y > bottom + 500.f && !player->is_grappling())
+				{
+					for (auto it = points.rbegin(); it != points.rend(); ++it)
+					{
+						if ((*it)->pos().y > top)
+						{
+							bool good = true;
+							for (auto& pl : players)
+							{
+								if (pl->target() == *it)
+								{
+									good = false;
+									break;
+								}
+							}
+							if (good)
+							{
+								player->target(*it);
+								break;
+							}
+						}
+					}
+				}
+			}
+
 			// generate level if the highest point is on the screen
-			if (!intro && highest_point > camera.getCenter().y - camera.getSize().y / 2.f)
+			if (!intro && highest_point > top)
 			{
 				float last_highest = highest_point;
 				int last_size = points.size();
