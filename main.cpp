@@ -372,8 +372,6 @@ int main(int argc, char* argv[])
 		std::cerr << "Failed to create render texture\n";
 		return 1;
 	}
-	sf::View camera = render_target.getDefaultView();
-
 	if (!sf::Shader::isAvailable())
 	{
 		std::cerr << "Shaders not available\n";
@@ -398,6 +396,8 @@ int main(int argc, char* argv[])
 	bool restart = true;
 	while (restart)
 	{
+		sf::View camera = render_target.getDefaultView();
+
 		bool intro = true;
 
 		sf::Color background {0, 0, 0};
@@ -410,15 +410,22 @@ int main(int argc, char* argv[])
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
 
-		float easy_dist = 200.f;
+		float min_dist = 150.f;
+		float easy_dist = 350.f;
 
 		std::list<Point*> points;
+		// starting points
 		points.push_back(new Point {1.f * winw / 3.f, winh - 400.f});
 		points.push_back(new Point {2.f * winw / 3.f, winh - 400.f});
+		// ladder
 		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 500.f});
-		points.push_back(new Point {2.f * winw / 3.f + 160.f, winh - 600.f});
-		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 700.f});
-		points.push_back(new Point {winw / 2.f - 200.f, winh - 800.f});
+		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 650.f});
+		// long grapple
+		points.push_back(new Point {2.f * winw / 3.f - 500.f, winh - 800.f});
+
+		// segue to normal gen
+		points.push_back(new Point {winw / 2.f - 300.f, winh - 1000.f});
+		points.push_back(new Point {winw / 2.f - 150.f, winh - 1000.f});
 
 		float highest_point = 0.f;
 		for (auto& point : points)
@@ -485,36 +492,46 @@ int main(int argc, char* argv[])
 			// generate level if the highest point is on the screen
 			if (!intro && highest_point > camera.getCenter().y - camera.getSize().y / 2.f)
 			{
-				float new_highest = highest_point;
+				float last_highest = highest_point;
+				int last_size = points.size();
+				bool new_high = false;
+				int new_points = rand() % 4 + 1;
 
-				std::vector<Point*> new_points;
-
-				while (new_points.size() < 3)
+				while (points.size() - last_size < new_points)
 				{
-					bool new_point = false;
-					while (!new_point)
+					for (auto& point : points)
 					{
-						for (auto& point : points)
-						{
-							float theta = (4.f * (rand() / (float)RAND_MAX) + 1.f) * M_PI / -6.f;
-							sf::Vector2f p {point->pos().x + cosf(theta) * easy_dist, point->pos().y + sinf(theta) * easy_dist};
-							if (p.y <= highest_point && p.x > 0.f && p.x < winw)
-							{
-								new_point = true;
-								new_points.push_back(new Point {p.x, p.y});
+						// random angle
+						float theta = (4.f * (rand() / (float)RAND_MAX) + 1.f) * M_PI / -6.f;
+						sf::Vector2f p {point->pos().x + cosf(theta) * easy_dist, point->pos().y + sinf(theta) * easy_dist};
 
-								if (p.y < new_highest)
-									new_highest = p.y;
+						// want it in bounds and at least one point higher than the previous (and not lower than intro points)
+						if (p.y < last_highest && p.y < winh - 800.f && p.x > 0.f && p.x < winw)
+						{
+							// make sure it isn't too close to other points
+							bool bad = false;
+							for (auto& ps : points)
+							{
+								if (dist2(ps->pos(), p) < min_dist * min_dist)
+								{
+									bad = true;
+									break;
+								}
+							}
+							if (!bad)
+							{
+								points.push_back(new Point {p.x, p.y});
+
+								if (p.y < highest_point)
+								{
+									new_high = true;
+									highest_point = p.y;
+								}
 								break;
 							}
 						}
 					}
 				}
-
-				for (auto& point : new_points)
-					points.push_back(point);
-
-				highest_point = new_highest;
 			}
 
 			// game step
