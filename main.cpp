@@ -410,6 +410,8 @@ int main(int argc, char* argv[])
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
 
+		float easy_dist = 200.f;
+
 		std::list<Point*> points;
 		points.push_back(new Point {1.f * winw / 3.f, winh - 400.f});
 		points.push_back(new Point {2.f * winw / 3.f, winh - 400.f});
@@ -483,9 +485,36 @@ int main(int argc, char* argv[])
 			// generate level if the highest point is on the screen
 			if (!intro && highest_point > camera.getCenter().y - camera.getSize().y / 2.f)
 			{
-				for (int i = 0; i < 3; ++i)
+				float new_highest = highest_point;
+
+				std::vector<Point*> new_points;
+
+				while (new_points.size() < 3)
 				{
+					bool new_point = false;
+					while (!new_point)
+					{
+						for (auto& point : points)
+						{
+							float theta = (4.f * (rand() / (float)RAND_MAX) + 1.f) * M_PI / -6.f;
+							sf::Vector2f p {point->pos().x + cosf(theta) * easy_dist, point->pos().y + sinf(theta) * easy_dist};
+							if (p.y <= highest_point && p.x > 0.f && p.x < winw)
+							{
+								new_point = true;
+								new_points.push_back(new Point {p.x, p.y});
+
+								if (p.y < new_highest)
+									new_highest = p.y;
+								break;
+							}
+						}
+					}
 				}
+
+				for (auto& point : new_points)
+					points.push_back(point);
+
+				highest_point = new_highest;
 			}
 
 			// game step
