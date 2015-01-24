@@ -3,6 +3,7 @@
 #include <ctime>
 #include <iostream>
 #include <list>
+#include <sstream>
 #include <vector>
 
 #include <SFML/Graphics.hpp>
@@ -431,6 +432,9 @@ int main(int argc, char* argv[])
 	gravity.x = 0.f;
 	gravity.y = 0.003f;
 
+	sf::Font font;
+	font.loadFromFile("/usr/share/fonts/TTF/DejaVuSansMono.ttf");
+
 	bool restart = true;
 	while (restart)
 	{
@@ -438,6 +442,7 @@ int main(int argc, char* argv[])
 		float camera_speed_factor = -0.001f;
 
 		bool intro = true;
+		bool gameover = false;
 
 		sf::Color background {0, 0, 0};
 
@@ -450,6 +455,10 @@ int main(int argc, char* argv[])
 		float game_start_time = 0.f;
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
+
+		sf::Text got;
+		got.setFont(font);
+		got.setCharacterSize(32);
 
 		float min_dist = 150.f;
 		float easy_dist = 350.f;
@@ -503,15 +512,18 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			for (int i = 0; i < players.size(); ++i)
+			if (!gameover)
 			{
-				sf::Vector2f aim {sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::Y)};
+				for (int i = 0; i < players.size(); ++i)
+				{
+					sf::Vector2f aim {sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::Y)};
 
-				// deadzone check
-				if (norm(aim) > 50.f)
-					players[i]->aim(aim, players, points, camera);
-				else
-					players[i]->stop_aim();
+					// deadzone check
+					if (norm(aim) > 50.f)
+						players[i]->aim(aim, players, points, camera);
+					else
+						players[i]->stop_aim();
+				}
 			}
 
 			float bottom = camera.getCenter().y + camera.getSize().y / 2.f;
@@ -534,44 +546,50 @@ int main(int argc, char* argv[])
 
 			float top = camera.getCenter().y - camera.getSize().y / 2.f;
 
-			bool gameover = false;
-			for (auto& player : players)
+			if (!gameover)
 			{
-				if (player->pos().y > bottom + 500.f && !player->is_grappling())
+				for (auto& player : players)
 				{
-					player->die();
-					if (player->get_lives() < 0)
+					if (player->pos().y > bottom + 500.f && !player->is_grappling())
 					{
-						gameover = true;
-						continue;
-					}
-
-					for (auto it = points.rbegin(); it != points.rend(); ++it)
-					{
-						if ((*it)->pos().y > top)
+						player->die();
+						if (player->get_lives() < 0)
 						{
-							bool good = true;
-							for (auto& pl : players)
+							if (!gameover)
 							{
-								if (pl->target() == *it)
+								gameover = true;
+								std::stringstream s;
+								s << "GAME OVER. SCORE: " << (render_target.getDefaultView().getCenter().y - camera.getCenter().y);
+								got.setString(s.str());
+								auto bounds = got.getLocalBounds();
+								got.setOrigin(bounds.width / 2.f, bounds.height / 2.f);
+								got.setPosition(winw / 2.f, winh / 2.f);
+							}
+							continue;
+						}
+
+						for (auto it = points.rbegin(); it != points.rend(); ++it)
+						{
+							if ((*it)->pos().y > top)
+							{
+								bool good = true;
+								for (auto& pl : players)
 								{
-									good = false;
+									if (pl->target() == *it)
+									{
+										good = false;
+										break;
+									}
+								}
+								if (good)
+								{
+									player->target(*it);
 									break;
 								}
-							}
-							if (good)
-							{
-								player->target(*it);
-								break;
 							}
 						}
 					}
 				}
-			}
-
-			if (gameover)
-			{
-				// TODO
 			}
 
 			// generate level if the highest point is on the screen
@@ -664,6 +682,11 @@ int main(int argc, char* argv[])
 				player->draw_on(render_target);
 			for (auto& player : players)
 				player->draw_target_on(render_target);
+
+			// gui
+			render_target.setView(render_target.getDefaultView());
+			render_target.draw(got);
+
 			render_target.display();
 
 			// draw with full screen effects
