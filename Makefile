@@ -1,5 +1,5 @@
 SOURCE=main.cpp
-EXE=test
+EXE=climb
 CXXFLAGS=-std=c++11 -Wall -Wextra -Wfatal-errors -ggdb -pg
 
 ifdef WINDOWS

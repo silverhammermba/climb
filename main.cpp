@@ -4,14 +4,17 @@
 
 #include <SFML/Graphics.hpp>
 
+const unsigned int winw = 1600;
+const unsigned int winh = 900;
+
 using std::rand;
 
 int main(int argc, char* argv[])
 {
-	sf::RenderWindow window {sf::VideoMode {800, 600}, "Test"};
+	sf::RenderWindow window {sf::VideoMode {winw, winh}, "Test"};
 
 	sf::RenderTexture target;
-	if (!target.create(800, 600))
+	if (!target.create(winw, winh))
 	{
 		std::cerr << "Failed to create render texture\n";
 		return 1;
@@ -30,16 +33,20 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	fx.setParameter("texture", sf::Shader::CurrentTexture);
+	fx.setParameter("winw", (float)winw);
+	fx.setParameter("winh", (float)winh);
 
 	std::srand(time(nullptr));
 
 	sf::Color background {0, 0, 0};
-	sf::Color new_color {0, 0, 0};
 
 	sf::Vector2f pos {0.f, 0.f};
 	sf::RectangleShape rect {sf::Vector2f {40.f, 40.f}};
 
 	sf::Clock timer;
+	sf::Clock frame_timer;
+	int game_step = 16;
+	int last_frame_time = 0;
 
 	bool running = true;
 	while (running)
@@ -61,30 +68,15 @@ int main(int argc, char* argv[])
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
 			dir.y += 1.f;
 
-		pos += dir * 4.f;
-		rect.setPosition(pos);
-
-		// pick new background color if we're there
-		if (new_color == background)
+		while (last_frame_time > game_step)
 		{
-			new_color.r = rand() % 256;
-			new_color.g = rand() % 256;
-			new_color.b = rand() % 256;
+			// step game world
+			pos += dir * 4.f;
+
+			last_frame_time -= game_step;
 		}
 
-		// move towards new background color
-		if (new_color.r < background.r)
-			background.r -= rand() % 2;
-		else if (new_color.r > background.r)
-			background.r += rand() % 2;
-		else if (new_color.g < background.g)
-			background.g -= rand() % 2;
-		else if (new_color.g > background.g)
-			background.g += rand() % 2;
-		else if (new_color.b < background.b)
-			background.b -= rand() % 2;
-		else if (new_color.b > background.b)
-			background.b += rand() % 2;
+		rect.setPosition(pos);
 
 		target.clear(background);
 		target.draw(rect);
@@ -95,6 +87,9 @@ int main(int argc, char* argv[])
 		window.clear();
 		window.draw(sf::Sprite {target.getTexture()}, &fx);
 		window.display();
+
+		last_frame_time += frame_timer.getElapsedTime().asMilliseconds();
+		frame_timer.restart();
 	}
 
 	return 0;
