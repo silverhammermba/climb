@@ -10,6 +10,7 @@
 const unsigned int winw = 1600;
 const unsigned int winh = 900;
 const unsigned int game_step = 16;
+int game_time;
 sf::Vector2f gravity;
 
 using std::rand;
@@ -97,6 +98,7 @@ class Swinger : Grappable
 	sf::RectangleShape rectangle;
 	sf::RectangleShape reticle;
 	sf::ConvexShape aimbox;
+	sf::RectangleShape rope;
 
 	Grappable* grapple_target = nullptr;
 	Grappable* nearest = nullptr;
@@ -134,12 +136,15 @@ public:
 
 		aimbox.setPointCount(3);
 		aimbox.setPoint(0, sf::Vector2f{40, 50});
-		aimbox.setPoint(1, sf::Vector2f{300, 0});
+		aimbox.setPoint(1, sf::Vector2f{80, 0});
 		aimbox.setPoint(2, sf::Vector2f{40, -50});
 		aimbox.setFillColor(sf::Color {255, 255, 0, 50});
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
 		max_target_dist2 = max_target_dist * max_target_dist;
+
+		rope.setOrigin(0.f, 1.5f);
+		rope.setFillColor(sf::Color {126, 0, 0});
 	}
 
 	bool is_grappling() const
@@ -235,7 +240,7 @@ public:
 	}
 
 	// aim and find nearest grapple to aim
-	float aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::list<Point*>& points)
+	float aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::list<Point*>& points, const sf::View& camera)
 	{
 		float theta = atan2f(dir.y, dir.x);
 		aimbox.setRotation(rad2deg(theta));
@@ -278,8 +283,13 @@ public:
 			}
 		}
 
+		float top = camera.getCenter().y - camera.getSize().y / 2.f;
+
 		for (auto& point : points)
 		{
+			// can't target stuff off screen
+			if (point->pos().y < top)
+				continue;
 			// skip points already being grappled
 			bool already_targeted = false;
 			for (auto& player : players)
@@ -336,12 +346,23 @@ public:
 	void let_go()
 	{
 		grappling = 0;
+		if (grapple_target)
+			velocity += grapple_target->vel();
 		grapple_target = nullptr;
 		return;
 	}
 
 	void draw_on(sf::RenderTexture& render_target)
 	{
+		if (grapple_target)
+		{
+			rope.setSize(sf::Vector2f{dist(position, grapple_target->pos()), 3.f});
+			rope.setPosition(position);
+			sf::Vector2f dir = grapple_target->pos() - position;
+			rope.setRotation(rad2deg(atan2f(dir.y, dir.x)));
+			render_target.draw(rope);
+		}
+
 		rectangle.setPosition(position);
 		render_target.draw(rectangle);
 	}
@@ -397,6 +418,7 @@ int main(int argc, char* argv[])
 	while (restart)
 	{
 		sf::View camera = render_target.getDefaultView();
+		float camera_speed_factor = -0.001f;
 
 		bool intro = true;
 
@@ -407,6 +429,8 @@ int main(int argc, char* argv[])
 		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 300.f});
 
 		sf::Clock timer;
+		game_time = 0;
+		int game_start_time = 0;
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
 
@@ -421,7 +445,7 @@ int main(int argc, char* argv[])
 		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 500.f});
 		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 650.f});
 		// long grapple
-		points.push_back(new Point {2.f * winw / 3.f - 500.f, winh - 800.f});
+		points.push_back(new Point {2.f * winw / 3.f - 450.f, winh - 800.f});
 
 		// segue to normal gen
 		points.push_back(new Point {winw / 2.f - 300.f, winh - 1000.f});
@@ -452,7 +476,7 @@ int main(int argc, char* argv[])
 					{
 						if (event.joystickButton.button == 0)
 							players[event.joystickButton.joystickId]->grapple();
-						else if (event.joystickButton.button == 1)
+						else if (!intro && event.joystickButton.button == 1)
 							players[event.joystickButton.joystickId]->let_go();
 					}
 				}
@@ -468,15 +492,17 @@ int main(int argc, char* argv[])
 
 				// deadzone check
 				if (norm(aim) > 50.f)
-					players[i]->aim(aim, players, points);
+					players[i]->aim(aim, players, points, camera);
 				else
 					players[i]->stop_aim();
 			}
 
+			float bottom = camera.getCenter().y + camera.getSize().y / 2.f;
+
 			// remove points that are off the bottom
 			for (auto it = points.begin(); it != points.end();)
 			{
-				if ((*it)->pos().y > camera.getCenter().y + camera.getSize().y / 2.f)
+				if ((*it)->pos().y > bottom)
 				{
 					for (auto& player : players)
 					{
@@ -554,11 +580,15 @@ int main(int argc, char* argv[])
 						}
 					}
 					if (intro_done)
+					{
 						intro = false;
+						game_start_time = game_time;
+					}
 				}
 				if (!intro)
 				{
-					camera.move(0, -0.2f);
+					float camera_speed = (game_time - game_start_time) * camera_speed_factor;
+					camera.move(0, camera_speed * game_step);
 				}
 
 				last_frame_time -= game_step;
@@ -576,7 +606,7 @@ int main(int argc, char* argv[])
 			render_target.display();
 
 			// draw with full screen effects
-			fx.setParameter("time", timer.getElapsedTime().asSeconds());
+			fx.setParameter("time", game_time);
 
 			window.clear();
 			window.draw(sf::Sprite {render_target.getTexture()}, &fx);
@@ -584,6 +614,7 @@ int main(int argc, char* argv[])
 
 			last_frame_time += frame_timer.getElapsedTime().asMilliseconds();
 			frame_timer.restart();
+			game_time = timer.getElapsedTime().asSeconds();
 		}
 
 		// cleanup
