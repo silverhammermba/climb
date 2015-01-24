@@ -207,6 +207,7 @@ public:
 			// normalized
 			sf::Vector2f grap_perpn = normv(grap_perp);
 
+			// naive velocity/position update
 			swing_vel += dot(gravity, grap_perpn) * (float)game_step;
 			position += grap_perpn * swing_vel * (float)game_step;
 
@@ -233,8 +234,22 @@ public:
 			// can't grapple self
 			if (player == this)
 				continue;
+
 			// can't grapple someone grappling self
 			if (player->target() == this)
+				continue;
+
+			// skip players already being grappled
+			bool already_targeted = false;
+			for (auto& player2 : players)
+			{
+				if (player2->target() == player)
+				{
+					already_targeted = true;
+					break;
+				}
+			}
+			if (already_targeted)
 				continue;
 
 			float ldist2 = dist2line(dir, player->pos());
@@ -250,6 +265,19 @@ public:
 
 		for (auto& point : points)
 		{
+			// skip points already being grappled
+			bool already_targeted = false;
+			for (auto& player : players)
+			{
+				if (player->target() == point)
+				{
+					already_targeted = true;
+					break;
+				}
+			}
+			if (already_targeted)
+				continue;
+
 			float ldist2 = dist2line(dir, point->pos());
 			if (ldist2 < 0.f)
 				continue;
