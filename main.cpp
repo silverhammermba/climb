@@ -40,13 +40,18 @@ int main(int argc, char* argv[])
 
 	sf::Color background {0, 0, 0};
 
-	sf::Vector2f pos {0.f, 0.f};
+	sf::Vector2f pos {winw / 2.f - 20.f, winh - 40.f};
 	sf::RectangleShape rect {sf::Vector2f {40.f, 40.f}};
 
 	sf::Clock timer;
 	sf::Clock frame_timer;
 	int game_step = 16;
 	int last_frame_time = 0;
+
+	sf::Vector2f grapple {winw / 2.f, winh / 2.f - 100.f};
+	sf::CircleShape gcirc {20.f};
+	gcirc.setPosition(grapple);
+	gcirc.setFillColor(sf::Color {0.f, 0.f, 255.f});
 
 	bool running = true;
 	while (running)
@@ -79,6 +84,7 @@ int main(int argc, char* argv[])
 		rect.setPosition(pos);
 
 		target.clear(background);
+		target.draw(gcirc);
 		target.draw(rect);
 		target.display();
 
