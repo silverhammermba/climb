@@ -12,6 +12,11 @@ const unsigned int game_step = 16;
 
 using std::rand;
 
+float rad2deg(float rad)
+{
+	return (rad * 180.f) / M_PI;
+}
+
 float dist2(const sf::Vector2f& p1, const sf::Vector2f& p2)
 {
 	return (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
@@ -55,24 +60,35 @@ class Swinger
 {
 	sf::Vector2f position;
 	sf::RectangleShape rectangle;
+	sf::ConvexShape aimbox;
 
 	int grapple_target = -1;
 	// 0 = not grappling, 1 = moving toward point, 2 = swingin'
 	int grappling = 0;
 	float swing_dir = 1.f;
 
-	float grap_dist = 100.f;
+	float grap_dist = 200.f;
 	float grap_dist2;
 
 	float pull_speed_factor = 0.04f;
 	float min_pull_speed = 1.f;
-	float swing_speed_factor = 0.1f;
-	float min_swing_speed = 0.03f;
+	float swing_speed_factor = 10.f;
+	float min_swing_speed = 0.008f;
+
+	float aiming = false;
 public:
 	Swinger(float x, float y)
 		: position {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}
 	{
-		rectangle.setOrigin(20.f, 0.f);
+		rectangle.setOrigin(20.f, 20.f);
+
+		aimbox.setPointCount(4);
+		aimbox.setPoint(0, sf::Vector2f{40, 50});
+		aimbox.setPoint(1, sf::Vector2f{300, 60});
+		aimbox.setPoint(2, sf::Vector2f{300, -60});
+		aimbox.setPoint(3, sf::Vector2f{40, -50});
+		aimbox.setFillColor(sf::Color {255, 255, 0, 50});
+
 		grap_dist2 = grap_dist * grap_dist;
 	}
 
@@ -122,7 +138,7 @@ public:
 		{
 			float theta = atan2f(position.y - grapples[grapple_target].pos().y, position.x - grapples[grapple_target].pos().x);
 
-			float speed = sinf(theta) * swing_speed_factor;
+			float speed = sinf(theta) * swing_speed_factor / grap_dist;
 
 			// you're swinging too high, swing back towards middle
 			if (speed < min_swing_speed)
@@ -138,10 +154,23 @@ public:
 		}
 	}
 
+	void aim(const sf::Vector2f& dir)
+	{
+		aimbox.setRotation(rad2deg(atan2f(dir.y, dir.x)));
+		aiming = true;
+	}
+
 	void draw_on(sf::RenderTexture& target)
 	{
 		rectangle.setPosition(position);
 		target.draw(rectangle);
+
+		if (aiming)
+		{
+			aimbox.setPosition(position);
+			target.draw(aimbox);
+			aiming = false;
+		}
 	}
 };
 
@@ -176,7 +205,7 @@ int main(int argc, char* argv[])
 
 	sf::Color background {0, 0, 0};
 
-	Swinger p1 {winw / 2.f - 20.f, winh - 40.f};
+	Swinger p1 {winw / 2.f - 20.f, winh - 20.f};
 
 	sf::Clock timer;
 	sf::Clock frame_timer;
@@ -203,15 +232,13 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		sf::Vector2f dir {0.f, 0.f};
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-			dir.x -= 1.f;
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-			dir.x += 1.f;
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-			dir.y -= 1.f;
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-			dir.y += 1.f;
+		sf::Vector2f aim {sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::Y)};
+
+		// deadzone check
+		if (norm(aim) > 50.f)
+		{
+			p1.aim(aim);
+		}
 
 		while (game_step > 0 && last_frame_time > game_step)
 		{
@@ -224,12 +251,14 @@ int main(int argc, char* argv[])
 			last_frame_time -= game_step;
 		}
 
+		// draw on render texture
 		target.clear(background);
 		for (auto& grapple : grapples)
 			grapple.draw_on(target);
 		p1.draw_on(target);
 		target.display();
 
+		// draw with full screen effects
 		fx.setParameter("time", timer.getElapsedTime().asSeconds());
 
 		window.clear();
