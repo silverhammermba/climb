@@ -444,6 +444,13 @@ int main(int argc, char* argv[])
 	sf::Font font;
 	font.loadFromFile("/usr/share/fonts/TTF/DejaVuSansMono.ttf");
 
+	sf::Texture inst_tex;
+	if (!inst_tex.loadFromFile("img/inst.png"))
+	{
+		std::cerr << "Failed to load texture\n";
+		return 1;
+	}
+
 	bool restart = true;
 	while (restart)
 	{
@@ -454,6 +461,11 @@ int main(int argc, char* argv[])
 		bool gameover = false;
 
 		sf::Color background {0, 0, 0};
+
+		sf::Sprite inst {inst_tex};
+		inst.setOrigin(20.f, 9.f);
+		inst.setScale(4.f, 4.f);
+		inst.setPosition(winw / 2.f, winh / 2.f);
 
 		std::vector<Swinger*> players;
 		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 20.f, sf::Color {203, 40, 20}});
@@ -765,6 +777,9 @@ int main(int argc, char* argv[])
 			// draw on render texture
 			render_target.clear(background);
 			render_target.setView(camera);
+
+			render_target.draw(inst);
+
 			for (auto& player : players)
 				player->draw_rope_on(render_target);
 			for (auto& point : points)
