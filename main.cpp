@@ -11,17 +11,49 @@ const unsigned int winh = 900;
 
 using std::rand;
 
-float dist2(sf::Vector2f& p1, sf::Vector2f& p2)
+class Grapple
+{
+	sf::Vector2f position;
+	sf::CircleShape circle;
+public:
+	Grapple(float x, float y)
+		: position {x, y}, circle {10.f}
+	{
+		circle.setOrigin(10.f, 10.f);
+		circle.setPosition(position);
+		circle.setFillColor(sf::Color {0, 0, 255});
+	}
+
+	inline const sf::Vector2f& pos()
+	{
+		return position;
+	}
+
+	void draw_on(sf::RenderTexture& target)
+	{
+		target.draw(circle);
+	}
+};
+
+class Swinger
+{
+public:
+	Swinger()
+	{
+	}
+};
+
+float dist2(const sf::Vector2f& p1, const sf::Vector2f& p2)
 {
 	return (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
 }
 
-float norm(sf::Vector2f v)
+float norm(const sf::Vector2f& v)
 {
 	return sqrtf(v.x * v.x + v.y * v.y);
 }
 
-sf::Vector2f normv(sf::Vector2f v)
+sf::Vector2f normv(const sf::Vector2f& v)
 {
 	return v / norm(v);
 }
@@ -66,17 +98,9 @@ int main(int argc, char* argv[])
 	int game_step = 16;
 	int last_frame_time = 0;
 
-	std::vector<sf::Vector2f> grapples;
-	grapples.push_back(sf::Vector2f {winw / 3.f, winh / 2.f - 100.f});
-	grapples.push_back(sf::Vector2f {2.f * winw / 3.f, winh / 2.f - 100.f});
-	std::vector<sf::CircleShape> gcircs;
-	for (int i = 0; i < grapples.size(); ++i)
-	{
-		gcircs.emplace(gcircs.end(), 10.f);
-		gcircs[i].setOrigin(10.f, 10.f);
-		gcircs[i].setPosition(grapples[i]);
-		gcircs[i].setFillColor(sf::Color {0, 0, 255});
-	}
+	std::vector<Grapple> grapples;
+	grapples.emplace(grapples.end(), winw / 3.f, winh / 2.f - 100.f);
+	grapples.emplace(grapples.end(), 2.f * winw / 3.f, winh / 2.f - 100.f);
 
 	// 0 = not grappling, 1 = moving toward point, 2 = swingin'
 	int grapple_target = -1;
@@ -128,7 +152,7 @@ int main(int argc, char* argv[])
 				grappling = 1;
 			}
 
-			float d2 = dist2(pos, grapples[grapple_target]);
+			float d2 = dist2(pos, grapples[grapple_target].pos());
 			// need to move towards grapple
 			if (d2 > grap_dist2)
 			{
@@ -138,7 +162,7 @@ int main(int argc, char* argv[])
 				if (speed < min_pull_speed)
 					speed = min_pull_speed;
 
-				pos += normv(grapples[grapple_target] - pos) * speed;
+				pos += normv(grapples[grapple_target].pos() - pos) * speed;
 			}
 			// if we're close enough, start swinging
 			else if (grappling == 1)
@@ -149,21 +173,21 @@ int main(int argc, char* argv[])
 			// if swinging
 			if (grappling == 2)
 			{
-				float theta = atan2f(pos.y - grapples[grapple_target].y, pos.x - grapples[grapple_target].x);
+				float theta = atan2f(pos.y - grapples[grapple_target].pos().y, pos.x - grapples[grapple_target].pos().x);
 
 				float speed = sinf(theta) * swing_speed_factor;
 
 				// you're swinging too high, swing back towards middle
 				if (speed < min_swing_speed)
 				{
-					swing_dir = (pos.x - grapples[grapple_target].x) / std::abs(pos.x - grapples[grapple_target].x);
+					swing_dir = (pos.x - grapples[grapple_target].pos().x) / std::abs(pos.x - grapples[grapple_target].pos().x);
 					speed = min_swing_speed;
 				}
 
 				theta += swing_dir * speed;
 
-				pos.x = cosf(theta) * grap_dist + grapples[grapple_target].x;
-				pos.y = sinf(theta) * grap_dist + grapples[grapple_target].y;
+				pos.x = cosf(theta) * grap_dist + grapples[grapple_target].pos().x;
+				pos.y = sinf(theta) * grap_dist + grapples[grapple_target].pos().y;
 			}
 
 			last_frame_time -= game_step;
@@ -172,8 +196,8 @@ int main(int argc, char* argv[])
 		rect.setPosition(pos);
 
 		target.clear(background);
-		for (auto& gcirc : gcircs)
-			target.draw(gcirc);
+		for (auto& grapple : grapples)
+			grapple.draw_on(target);
 		target.draw(rect);
 		target.display();
 
