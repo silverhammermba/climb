@@ -124,6 +124,8 @@ class Swinger : public Grappable
 	int need_center = 0;
 
 	sf::Vector2f last_target_pos;
+
+	int lives = 3;
 public:
 	Swinger(float x, float y)
 		: Grappable {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}, reticle {sf::Vector2f{20.f, 20.f}}
@@ -145,6 +147,16 @@ public:
 
 		rope.setOrigin(0.f, 1.5f);
 		rope.setFillColor(sf::Color {126, 0, 0});
+	}
+
+	int get_lives() const
+	{
+		return lives;
+	}
+
+	void die()
+	{
+		--lives;
 	}
 
 	bool is_grappling() const
@@ -519,10 +531,18 @@ int main(int argc, char* argv[])
 
 			float top = camera.getCenter().y - camera.getSize().y / 2.f;
 
+			bool gameover = false;
 			for (auto& player : players)
 			{
 				if (player->pos().y > bottom + 500.f && !player->is_grappling())
 				{
+					player->die();
+					if (player->get_lives() < 0)
+					{
+						gameover = true;
+						continue;
+					}
+
 					for (auto it = points.rbegin(); it != points.rend(); ++it)
 					{
 						if ((*it)->pos().y > top)
@@ -544,6 +564,11 @@ int main(int argc, char* argv[])
 						}
 					}
 				}
+			}
+
+			if (gameover)
+			{
+				// TODO
 			}
 
 			// generate level if the highest point is on the screen
