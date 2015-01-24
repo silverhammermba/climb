@@ -137,23 +137,35 @@ class Swinger : public Grappable
 	sf::Vector2f last_target_pos;
 
 	int lives = 3;
+
+	float half_height;
+	float half_width;
 public:
-	Swinger(float x, float y, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
-		: Grappable {x, y}, avatar {avatar_tex}, reticle {reticle_tex}, aimbox {aimbox_tex}, rope {rope_tex}
+	Swinger(float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
+		: Grappable {x, 0.f}, avatar {avatar_tex}, reticle {reticle_tex}, aimbox {aimbox_tex}, rope {rope_tex}
 	{
-		avatar.setOrigin(5.f, 6.f);
-		avatar.setScale(4.f, 4.f);
+		auto s = avatar_tex.getSize();
+		float scale = 4.f;
+		half_height = s.y * scale / 2.f;
+		half_width = s.x * scale / 2.f;
+		position.y = winh - half_height;
+
+		avatar.setOrigin(s.x / 2.f, s.y / 2.f);
+		avatar.setScale(scale, scale);
 		avatar.setColor(color);
 
-		reticle.setOrigin(6.f, 6.f);
-		reticle.setScale(4.f, 4.f);
+		s = reticle_tex.getSize();
+		reticle.setOrigin(s.x / 2.f, s.y / 2.f);
+		reticle.setScale(scale, scale);
 		reticle.setColor(color);
 
-		aimbox.setOrigin(-6.f, 6.f);
-		aimbox.setScale(4.f, 4.f);
+		s = aimbox_tex.getSize();
+		aimbox.setOrigin(s.x / -2.f, s.y / 2.f);
+		aimbox.setScale(scale, scale);
 		aimbox.setColor(sf::Color {color.r, color.g, color.b, 50});
 
-		rope.setOrigin(0.f, 1.f);
+		s = rope_tex.getSize();
+		rope.setOrigin(0.f, s.y / 2.f);
 		rope.setColor(sf::Color {color.r / 3, color.g / 3, color.b / 3});
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
@@ -195,23 +207,23 @@ public:
 			velocity += gravity * (float)game_step;
 			position += velocity * (float)game_step;
 
-			if (position.x > winw - 20.f)
+			if (position.x > winw - half_height)
 			{
-				position.x = winw - 20.f;
+				position.x = winw - half_height;
 				velocity.x = velocity.x / -2.f;
 			}
-			else if (position.x < 20.f)
+			else if (position.x < half_width)
 			{
-				position.x = 20.f;
+				position.x = half_width;
 				velocity.x = velocity.x / -2.f;
 			}
 
 			// don't fall through floor
-			if (position.y > winh - 20.f)
+			if (position.y > winh - half_height)
 			{
 				velocity.x = 0.f;
 				velocity.y = 0.f;
-				position.y = winh - 20.f;
+				position.y = winh - half_height;
 			}
 			return;
 		}
@@ -489,14 +501,14 @@ int main(int argc, char* argv[])
 		sf::Color background {0, 0, 0};
 
 		sf::Sprite inst {inst_tex};
-		inst.setOrigin(20.f, 9.f);
+		auto inst_s = inst_tex.getSize();
+		inst.setOrigin(inst_s.x / 2.f, inst_s.y / 2.f);
 		inst.setScale(4.f, 4.f);
 		inst.setPosition(winw / 2.f, winh / 2.f);
 
 		std::vector<Swinger*> players;
 		players.push_back(new Swinger {
 			1.f * winw / 3.f - 20.f,
-			winh - 20.f,
 			sf::Color {203, 40, 20},
 			avatar_tex,
 			reticle_tex,
@@ -505,7 +517,6 @@ int main(int argc, char* argv[])
 		});
 		players.push_back(new Swinger {
 			2.f * winw / 3.f + 20.f,
-			winh - 20.f,
 			sf::Color {243, 166, 10},
 			avatar_tex,
 			reticle_tex,
