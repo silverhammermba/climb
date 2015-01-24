@@ -9,6 +9,7 @@
 const unsigned int winw = 1600;
 const unsigned int winh = 900;
 const unsigned int game_step = 16;
+sf::Vector2f gravity;
 
 using std::rand;
 
@@ -46,9 +47,10 @@ class Grappable
 {
 protected:
 	sf::Vector2f position;
+	sf::Vector2f velocity;
 public:
 	Grappable(float x, float y)
-		: position {x, y}
+		: position {x, y}, velocity {0.f, 0.f}
 	{}
 
 	Grappable(const sf::Vector2f& v)
@@ -149,7 +151,18 @@ public:
 	{
 		// nothing to do if not grappling
 		if (!grapple_target)
+		{
+			velocity += gravity * (float)game_step;
+			position += velocity * (float)game_step;
+
+			// don't fall through floor
+			if (position.y > winh - 20.f)
+			{
+				velocity.y = 0.f;
+				position.y = winh - 20.f;
+			}
 			return;
+		}
 
 		float d2 = dist2(position, grapple_target->pos());
 		// need to move towards grapple
@@ -173,41 +186,14 @@ public:
 		// if swinging
 		if (grappling == 2)
 		{
-			// first update my position in case target moved
-			position += grapple_target->pos() - last_target_pos;
-
-			float theta = atan2f(position.y - grapple_target->pos().y, position.x - grapple_target->pos().x);
-
-			float base_speed = sinf(theta);
-
-			if (base_speed < min_base_speed)
-			{
-				float side = position.x - grapple_target->pos().x;
-				swing_dir = side / std::abs(side);
-				base_speed = min_base_speed;
-				need_center = swing_dir;
-			}
-
-			float speed = base_speed * swing_speed_factor / grap_dist;
-
-			if (need_center != 0.f)
-			{
-				float side = position.x - grapple_target->pos().x;
-				int ndir = side / std::abs(side);
-				if (ndir == need_center)
-				{
-					speed *= 1.3f;
-				}
-				else
-				{
-					need_center = 0;
-				}
-			}
-
-			theta += swing_dir * speed;
-
-			position.x = cosf(theta) * grap_dist + grapple_target->pos().x;
-			position.y = sinf(theta) * grap_dist + grapple_target->pos().y;
+			sf::Vector2f grap = position - grapple_target->pos();
+			sf::Vector2f grap_perp {grap.y, -grap.x};
+			sf::Vector2f grap_perpn = normv(grap_perp);
+			sf::Vector2f grap_accel = grap_perpn * dot(gravity, grap_perpn);
+			velocity += grap_accel * (float)game_step;
+			position += velocity * (float)game_step;
+			sf::Vector2f delta = position - grapple_target->pos();
+			position = grapple_target->pos() + delta * (grap_dist / norm(delta));
 
 			last_target_pos = grapple_target->pos();
 		}
@@ -336,14 +322,17 @@ int main(int argc, char* argv[])
 
 	std::srand(time(nullptr));
 
+	gravity.x = 0.f;
+	gravity.y = 0.005f;
+
 	bool restart = true;
 	while (restart)
 	{
 		sf::Color background {0, 0, 0};
 
 		std::vector<Swinger*> players;
-		players.push_back(new Swinger {winw / 2.f - 20.f, winh - 20.f});
-		players.push_back(new Swinger {winw / 2.f + 20.f, winh - 20.f});
+		players.push_back(new Swinger {winw / 2.f - 20.f, winh - 300.f});
+		players.push_back(new Swinger {winw / 2.f + 20.f, winh - 300.f});
 
 		sf::Clock timer;
 		sf::Clock frame_timer;
