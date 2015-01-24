@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <vector>
 
 #include <SFML/Graphics.hpp>
 
@@ -64,12 +65,20 @@ int main(int argc, char* argv[])
 	int game_step = 16;
 	int last_frame_time = 0;
 
-	sf::Vector2f grapple {winw / 2.f, winh / 2.f - 100.f};
-	sf::CircleShape gcirc {20.f};
-	gcirc.setPosition(grapple);
-	gcirc.setFillColor(sf::Color {0, 0, 255});
+	std::vector<sf::Vector2f> grapples;
+	grapples.push_back(sf::Vector2f {winw / 3.f, winh / 2.f - 100.f});
+	grapples.push_back(sf::Vector2f {2.f * winw / 3.f, winh / 2.f - 100.f});
+	std::vector<sf::CircleShape> gcircs;
+	gcircs.emplace(gcircs.end(), 20.f);
+	gcircs.emplace(gcircs.end(), 20.f);
+	for (int i = 0; i < grapples.size(); ++i)
+	{
+		gcircs[i].setPosition(grapples[i]);
+		gcircs[i].setFillColor(sf::Color {0, 0, 255});
+	}
 
 	// 0 = not grappling, 1 = moving toward point, 2 = swingin'
+	int grapple_target = -1;
 	int grappling = 0;
 	float swing_dir = 1.f;
 
@@ -84,6 +93,14 @@ int main(int argc, char* argv[])
 		{
 			if (event.type == sf::Event::Closed)
 				running = false;
+			if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::Space)
+			{
+				if (grapple_target >= 0)
+				{
+					grapple_target = 1 - grapple_target;
+					grappling = 1;
+				}
+			}
 		}
 
 		sf::Vector2f dir {0.f, 0.f};
@@ -100,16 +117,19 @@ int main(int argc, char* argv[])
 		{
 			// grapple
 			if (!grappling)
+			{
+				grapple_target = 0;
 				grappling = 1;
+			}
 
-			float d2 = dist2(pos, grapple);
+			float d2 = dist2(pos, grapples[grapple_target]);
 			// need to move towards grapple
 			if (d2 > grap_dist2)
 			{
 				float speed = sqrtf(d2 - grap_dist2) * 0.02f;
 				if (speed < 1.f)
 					speed = 1.f;
-				pos += normv(grapple - pos) * speed;
+				pos += normv(grapples[grapple_target] - pos) * speed;
 			}
 			// if we're close enough, start swinging
 			else if (grappling == 1)
@@ -120,20 +140,20 @@ int main(int argc, char* argv[])
 			// if swinging
 			if (grappling == 2)
 			{
-				float theta = atan2f(pos.y - grapple.y, pos.x - grapple.x);
+				float theta = atan2f(pos.y - grapples[grapple_target].y, pos.x - grapples[grapple_target].x);
 
 				float speed = sinf(theta);
 
 				if (speed < 0.3f)
 				{
-					swing_dir *= -1.f;
+					swing_dir = (pos.x - grapples[grapple_target].x) / std::abs(pos.x - grapples[grapple_target].x);
 					speed = 0.3f;
 				}
 
 				theta += swing_dir * speed / 10.f;
 
-				pos.x = cosf(theta) * grap_dist + grapple.x;
-				pos.y = sinf(theta) * grap_dist + grapple.y;
+				pos.x = cosf(theta) * grap_dist + grapples[grapple_target].x;
+				pos.y = sinf(theta) * grap_dist + grapples[grapple_target].y;
 			}
 
 			last_frame_time -= game_step;
@@ -142,7 +162,8 @@ int main(int argc, char* argv[])
 		rect.setPosition(pos);
 
 		target.clear(background);
-		target.draw(gcirc);
+		for (auto& gcirc : gcircs)
+			target.draw(gcirc);
 		target.draw(rect);
 		target.display();
 
