@@ -10,7 +10,7 @@
 const unsigned int winw = 1600;
 const unsigned int winh = 900;
 const unsigned int game_step = 16;
-int game_time;
+float game_time;
 sf::Vector2f gravity;
 
 using std::rand;
@@ -127,26 +127,28 @@ class Swinger : public Grappable
 
 	int lives = 3;
 public:
-	Swinger(float x, float y)
-		: Grappable {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}, reticle {sf::Vector2f{20.f, 20.f}}
+	Swinger(float x, float y, const sf::Color& color)
+		: Grappable {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}, reticle {sf::Vector2f{40.f, 40.f}}
 	{
 		rectangle.setOrigin(20.f, 20.f);
-		reticle.setOrigin(10.f, 10.f);
+		rectangle.setFillColor(color);
+
+		reticle.setOrigin(20.f, 20.f);
 		reticle.setFillColor(sf::Color {0, 0, 0, 0});
-		reticle.setOutlineColor(sf::Color {255, 0, 0});
-		reticle.setOutlineThickness(2.f);
+		reticle.setOutlineColor(sf::Color {color.r * color.r, color.g * color.g, color.b * color.b});
+		reticle.setOutlineThickness(3.f);
 
 		aimbox.setPointCount(3);
 		aimbox.setPoint(0, sf::Vector2f{40, 50});
 		aimbox.setPoint(1, sf::Vector2f{80, 0});
 		aimbox.setPoint(2, sf::Vector2f{40, -50});
-		aimbox.setFillColor(sf::Color {255, 255, 0, 50});
+		aimbox.setFillColor(sf::Color {color.r, color.g, color.b, 50});
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
 		max_target_dist2 = max_target_dist * max_target_dist;
 
 		rope.setOrigin(0.f, 1.5f);
-		rope.setFillColor(sf::Color {126, 0, 0});
+		rope.setFillColor(sf::Color {color.r / 3, color.g / 3, color.b / 3});
 	}
 
 	int get_lives() const
@@ -391,6 +393,7 @@ public:
 			if (nearest)
 			{
 				reticle.setPosition(nearest->pos());
+				reticle.setRotation(game_time * 10);
 				render_target.draw(reticle);
 			}
 		}
@@ -439,12 +442,12 @@ int main(int argc, char* argv[])
 		sf::Color background {0, 0, 0};
 
 		std::vector<Swinger*> players;
-		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 300.f});
-		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 300.f});
+		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 300.f, sf::Color {203, 40, 20}});
+		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 300.f, sf::Color {243, 166, 10}});
 
 		sf::Clock timer;
-		game_time = 0;
-		int game_start_time = 0;
+		game_time = 0.f;
+		float game_start_time = 0.f;
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
 
