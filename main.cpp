@@ -61,11 +61,11 @@ public:
 	}
 };
 
-class Grapple : public Grappable
+class Point : public Grappable
 {
 	sf::CircleShape circle;
 public:
-	Grapple(float x, float y)
+	Point(float x, float y)
 		: Grappable {x, y}, circle {10.f}
 	{
 		circle.setOrigin(10.f, 10.f);
@@ -142,7 +142,7 @@ public:
 			grappling = 1;
 	}
 
-	void grapple()
+	void step()
 	{
 		// nothing to do if not grappling
 		if (!grapple_target)
@@ -188,7 +188,7 @@ public:
 	}
 
 	// aim and find nearest grapple to aim
-	float aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::vector<Grapple*>& grapples)
+	float aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::vector<Point*>& points)
 	{
 		float theta = atan2f(dir.y, dir.x);
 		aimbox.setRotation(rad2deg(theta));
@@ -217,15 +217,15 @@ public:
 			}
 		}
 
-		for (auto& grapple : grapples)
+		for (auto& point : points)
 		{
-			float ldist2 = dist2line(dir, grapple->pos());
+			float ldist2 = dist2line(dir, point->pos());
 			if (ldist2 < 0.f)
 				continue;
 
 			if (nearest == nullptr || ldist2 < ndist2)
 			{
-				nearest = grapple;
+				nearest = point;
 				ndist2 = ldist2;
 			}
 		}
@@ -236,7 +236,7 @@ public:
 	// return distance squared from p to the ray from position to position+dir (or -1 if not near ray)
 	float dist2line(const sf::Vector2f& dir, const sf::Vector2f& p)
 	{
-		if (dot(p, position) <= 0.f)
+		if (dot(p - position, dir) <= 0.f)
 			return -1.f;
 		if (dist2(p, position) > max_grapple_dist2)
 			return -1.f;
@@ -247,7 +247,7 @@ public:
 		return ldist2;
 	}
 
-	void gogo()
+	void grapple()
 	{
 		if (nearest)
 			target(nearest);
@@ -315,10 +315,10 @@ int main(int argc, char* argv[])
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
 
-		std::vector<Grapple*> grapples;
-		grapples.push_back(new Grapple {winw / 3.f, winh / 2.f - 100.f});
-		grapples.push_back(new Grapple {2.f * winw / 3.f, winh / 2.f - 100.f});
-		grapples.push_back(new Grapple {winw / 2.f, winh / 2.f - 50.f});
+		std::vector<Point*> points;
+		points.push_back(new Point {winw / 3.f, winh / 2.f - 100.f});
+		points.push_back(new Point {2.f * winw / 3.f, winh / 2.f - 100.f});
+		points.push_back(new Point {winw / 2.f, winh / 2.f - 50.f});
 
 		bool running = true;
 		while (running)
@@ -335,7 +335,7 @@ int main(int argc, char* argv[])
 				{
 					if (event.joystickButton.joystickId < players.size())
 					{
-						players[event.joystickButton.joystickId]->gogo();
+						players[event.joystickButton.joystickId]->grapple();
 					}
 				}
 				if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::R)
@@ -351,22 +351,22 @@ int main(int argc, char* argv[])
 				// deadzone check
 				if (norm(aim) > 50.f)
 				{
-					float theta = players[i]->aim(aim, players, grapples);
+					float theta = players[i]->aim(aim, players, points);
 				}
 			}
 
 			while (game_step > 0 && last_frame_time > game_step)
 			{
 				for (auto& player : players)
-					player->grapple();
+					player->step();
 
 				last_frame_time -= game_step;
 			}
 
 			// draw on render texture
 			target.clear(background);
-			for (auto& grapple : grapples)
-				grapple->draw_on(target);
+			for (auto& point : points)
+				point->draw_on(target);
 			for (auto& player : players)
 				player->draw_on(target);
 			target.display();
@@ -385,8 +385,8 @@ int main(int argc, char* argv[])
 		// cleanup
 		for (auto& player : players)
 			delete player;
-		for (auto& grapple : grapples)
-			delete grapple;
+		for (auto& point : points)
+			delete point;
 	}
 
 	return 0;
