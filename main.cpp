@@ -97,7 +97,7 @@ public:
 class Swinger : public Grappable
 {
 	sf::RectangleShape rectangle;
-	sf::RectangleShape reticle;
+	sf::Sprite reticle;
 	sf::ConvexShape aimbox;
 	sf::RectangleShape rope;
 
@@ -128,16 +128,15 @@ class Swinger : public Grappable
 
 	int lives = 3;
 public:
-	Swinger(float x, float y, const sf::Color& color)
-		: Grappable {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}, reticle {sf::Vector2f{40.f, 40.f}}
+	Swinger(float x, float y, const sf::Color& color, const sf::Texture& reticle_tex)
+		: Grappable {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}, reticle {reticle_tex}
 	{
 		rectangle.setOrigin(20.f, 20.f);
 		rectangle.setFillColor(color);
 
-		reticle.setOrigin(20.f, 20.f);
-		reticle.setFillColor(sf::Color {0, 0, 0, 0});
-		reticle.setOutlineColor(sf::Color {color.r * color.r, color.g * color.g, color.b * color.b});
-		reticle.setOutlineThickness(3.f);
+		reticle.setOrigin(6.f, 6.f);
+		reticle.setScale(4.f, 4.f);
+		reticle.setColor(color);
 
 		aimbox.setPointCount(3);
 		aimbox.setPoint(0, sf::Vector2f{40, 50});
@@ -451,6 +450,13 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	sf::Texture reticle_tex;
+	if (!reticle_tex.loadFromFile("img/reticle.png"))
+	{
+		std::cerr << "Failed to load texture\n";
+		return 1;
+	}
+
 	bool restart = true;
 	while (restart)
 	{
@@ -468,8 +474,8 @@ int main(int argc, char* argv[])
 		inst.setPosition(winw / 2.f, winh / 2.f);
 
 		std::vector<Swinger*> players;
-		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 20.f, sf::Color {203, 40, 20}});
-		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 20.f, sf::Color {243, 166, 10}});
+		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 20.f, sf::Color {203, 40, 20}, reticle_tex});
+		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 20.f, sf::Color {243, 166, 10}, reticle_tex});
 
 		sf::Clock timer;
 		game_time = 0.f;
