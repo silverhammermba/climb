@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -8,6 +9,21 @@ const unsigned int winw = 1600;
 const unsigned int winh = 900;
 
 using std::rand;
+
+float dist2(sf::Vector2f& p1, sf::Vector2f& p2)
+{
+	return (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
+}
+
+float norm(sf::Vector2f v)
+{
+	return sqrtf(v.x * v.x + v.y * v.y);
+}
+
+sf::Vector2f normv(sf::Vector2f v)
+{
+	return v / norm(v);
+}
 
 int main(int argc, char* argv[])
 {
@@ -51,7 +67,14 @@ int main(int argc, char* argv[])
 	sf::Vector2f grapple {winw / 2.f, winh / 2.f - 100.f};
 	sf::CircleShape gcirc {20.f};
 	gcirc.setPosition(grapple);
-	gcirc.setFillColor(sf::Color {0.f, 0.f, 255.f});
+	gcirc.setFillColor(sf::Color {0, 0, 255});
+
+	// 0 = not grappling, 1 = moving toward point, 2 = swingin'
+	int grappling = 0;
+	float swing_dir = 1.f;
+
+	float grap_dist = 100.f;
+	float grap_dist2 = grap_dist * grap_dist;
 
 	bool running = true;
 	while (running)
@@ -73,10 +96,45 @@ int main(int argc, char* argv[])
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
 			dir.y += 1.f;
 
-		while (last_frame_time > game_step)
+		while (game_step > 0 && last_frame_time > game_step)
 		{
-			// step game world
-			pos += dir * 4.f;
+			// grapple
+			if (!grappling)
+				grappling = 1;
+
+			float d2 = dist2(pos, grapple);
+			// need to move towards grapple
+			if (d2 > grap_dist2)
+			{
+				float speed = sqrtf(d2 - grap_dist2) * 0.02f;
+				if (speed < 1.f)
+					speed = 1.f;
+				pos += normv(grapple - pos) * speed;
+			}
+			// if we're close enough, start swinging
+			else if (grappling == 1)
+			{
+				grappling = 2;
+			}
+
+			// if swinging
+			if (grappling == 2)
+			{
+				float theta = atan2f(pos.y - grapple.y, pos.x - grapple.x);
+
+				float speed = sinf(theta);
+
+				if (speed < 0.3f)
+				{
+					swing_dir *= -1.f;
+					speed = 0.3f;
+				}
+
+				theta += swing_dir * speed / 10.f;
+
+				pos.x = cosf(theta) * grap_dist + grapple.x;
+				pos.y = sinf(theta) * grap_dist + grapple.y;
+			}
 
 			last_frame_time -= game_step;
 		}
