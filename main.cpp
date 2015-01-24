@@ -399,17 +399,16 @@ int main(int argc, char* argv[])
 		sf::Color background {0, 0, 0};
 
 		std::vector<Swinger*> players;
-		players.push_back(new Swinger {winw / 2.f - 20.f, winh - 300.f});
-		players.push_back(new Swinger {winw / 2.f + 20.f, winh - 300.f});
+		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 300.f});
+		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 300.f});
 
 		sf::Clock timer;
 		sf::Clock frame_timer;
 		int last_frame_time = 0;
 
 		std::vector<Point*> points;
-		points.push_back(new Point {winw / 3.f, winh / 2.f - 100.f});
-		points.push_back(new Point {2.f * winw / 3.f, winh / 2.f - 100.f});
-		points.push_back(new Point {winw / 2.f, winh / 2.f - 50.f});
+		points.push_back(new Point {1.f * winw / 3.f, winh / 2.f - 50.f});
+		points.push_back(new Point {2.f * winw / 3.f, winh / 2.f - 50.f});
 
 		bool running = true;
 		while (running)
