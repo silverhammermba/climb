@@ -111,8 +111,8 @@ class Swinger : Grappable
 
 	float aiming = false;
 
-	float max_grapple_dist = 500.f;
-	float max_grapple_dist2;
+	float max_target_dist = 400.f;
+	float max_target_dist2;
 
 	// velocity in the reference frame of swinging
 	float swing_vel = 0.f;
@@ -138,7 +138,7 @@ public:
 		aimbox.setFillColor(sf::Color {255, 255, 0, 50});
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
-		max_grapple_dist2 = max_grapple_dist * max_grapple_dist;
+		max_target_dist2 = max_target_dist * max_target_dist;
 	}
 
 	bool is_grappling() const
@@ -317,7 +317,7 @@ public:
 	{
 		if (dot(p - position, dir) <= 0.f)
 			return -1.f;
-		if (dist2(p, position) > max_grapple_dist2)
+		if (dist2(p, position) > max_target_dist2)
 			return -1.f;
 
 		float num = dir.y * p.x - dir.x * p.y + position.y * (position.x + dir.x) - position.x * (position.y + dir.y);
@@ -371,6 +371,7 @@ int main(int argc, char* argv[])
 		std::cerr << "Failed to create render texture\n";
 		return 1;
 	}
+	sf::View camera = render_target.getDefaultView();
 
 	if (!sf::Shader::isAvailable())
 	{
@@ -396,6 +397,8 @@ int main(int argc, char* argv[])
 	bool restart = true;
 	while (restart)
 	{
+		bool intro = true;
+
 		sf::Color background {0, 0, 0};
 
 		std::vector<Swinger*> players;
@@ -407,12 +410,24 @@ int main(int argc, char* argv[])
 		int last_frame_time = 0;
 
 		std::vector<Point*> points;
-		points.push_back(new Point {1.f * winw / 3.f, winh / 2.f - 50.f});
-		points.push_back(new Point {2.f * winw / 3.f, winh / 2.f - 50.f});
+		points.push_back(new Point {1.f * winw / 3.f, winh - 400.f});
+		points.push_back(new Point {2.f * winw / 3.f, winh - 400.f});
+		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 500.f});
+		points.push_back(new Point {2.f * winw / 3.f + 160.f, winh - 600.f});
+		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 700.f});
+		points.push_back(new Point {winw / 2.f - 200.f, winh - 800.f});
+
+		float highest_point = 0.f;
+		for (auto& point : points)
+		{
+			if (point->pos().y < highest_point)
+				highest_point = point->pos().y;
+		}
 
 		bool running = true;
 		while (running)
 		{
+			// input
 			sf::Event event;
 			while (window.pollEvent(event))
 			{
@@ -448,16 +463,45 @@ int main(int argc, char* argv[])
 					players[i]->stop_aim();
 			}
 
+			// generate level if the highest point is on the screen
+			if (!intro && highest_point > camera.getCenter().y - camera.getSize().y / 2.f)
+			{
+				for (int i = 0; i < 3; ++i)
+				{
+				}
+			}
+
+			// game step
 			while (game_step > 0 && last_frame_time > game_step)
 			{
 				for (auto& player : players)
 					player->step();
+
+				if (intro)
+				{
+					bool intro_done = true;
+					for (auto& player : players)
+					{
+						if (!player->is_grappling())
+						{
+							intro_done = false;
+							break;
+						}
+					}
+					if (intro_done)
+						intro = false;
+				}
+				if (!intro)
+				{
+					camera.move(0, -0.2f);
+				}
 
 				last_frame_time -= game_step;
 			}
 
 			// draw on render texture
 			render_target.clear(background);
+			render_target.setView(camera);
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
