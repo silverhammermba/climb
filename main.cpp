@@ -16,6 +16,16 @@ sf::Vector2f gravity;
 
 using std::rand;
 
+bool load(sf::Texture& tex, const std::string& file)
+{
+	if (!tex.loadFromFile(file))
+	{
+		std::cerr << "Failed to load texture " << file << std::endl;
+		return false;
+	}
+	return true;
+}
+
 float rad2deg(float rad)
 {
 	return (rad * 180.f) / M_PI;
@@ -96,10 +106,10 @@ public:
 
 class Swinger : public Grappable
 {
-	sf::RectangleShape rectangle;
+	sf::Sprite avatar;
 	sf::Sprite reticle;
-	sf::ConvexShape aimbox;
-	sf::RectangleShape rope;
+	sf::Sprite aimbox;
+	sf::Sprite rope;
 
 	Grappable* grapple_target = nullptr;
 	Grappable* nearest = nullptr;
@@ -128,27 +138,27 @@ class Swinger : public Grappable
 
 	int lives = 3;
 public:
-	Swinger(float x, float y, const sf::Color& color, const sf::Texture& reticle_tex)
-		: Grappable {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}, reticle {reticle_tex}
+	Swinger(float x, float y, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
+		: Grappable {x, y}, avatar {avatar_tex}, reticle {reticle_tex}, aimbox {aimbox_tex}, rope {rope_tex}
 	{
-		rectangle.setOrigin(20.f, 20.f);
-		rectangle.setFillColor(color);
+		avatar.setOrigin(5.f, 6.f);
+		avatar.setScale(4.f, 4.f);
+		avatar.setColor(color);
 
 		reticle.setOrigin(6.f, 6.f);
 		reticle.setScale(4.f, 4.f);
 		reticle.setColor(color);
 
-		aimbox.setPointCount(3);
-		aimbox.setPoint(0, sf::Vector2f{40, 50});
-		aimbox.setPoint(1, sf::Vector2f{80, 0});
-		aimbox.setPoint(2, sf::Vector2f{40, -50});
-		aimbox.setFillColor(sf::Color {color.r, color.g, color.b, 50});
+		aimbox.setOrigin(-6.f, 6.f);
+		aimbox.setScale(4.f, 4.f);
+		aimbox.setColor(sf::Color {color.r, color.g, color.b, 50});
+
+		rope.setOrigin(0.f, 1.f);
+		rope.setScale(4.f, 4.f);
+		rope.setColor(sf::Color {color.r / 3, color.g / 3, color.b / 3});
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
 		max_target_dist2 = max_target_dist * max_target_dist;
-
-		rope.setOrigin(0.f, 1.5f);
-		rope.setFillColor(sf::Color {color.r / 3, color.g / 3, color.b / 3});
 	}
 
 	int get_lives() const
@@ -370,7 +380,7 @@ public:
 	{
 		if (grapple_target == nullptr)
 			return;
-		rope.setSize(sf::Vector2f{dist(position, grapple_target->pos()), 3.f});
+		//rope.setSize(sf::Vector2f{dist(position, grapple_target->pos()), 3.f});
 		rope.setPosition(position);
 		sf::Vector2f dir = grapple_target->pos() - position;
 		rope.setRotation(rad2deg(atan2f(dir.y, dir.x)));
@@ -379,8 +389,8 @@ public:
 
 	void draw_on(sf::RenderTexture& render_target)
 	{
-		rectangle.setPosition(position);
-		render_target.draw(rectangle);
+		avatar.setPosition(position);
+		render_target.draw(avatar);
 	}
 
 	void draw_target_on(sf::RenderTexture& render_target)
@@ -403,8 +413,8 @@ public:
 	{
 		for (int i = 0; i < lives; ++i)
 		{
-			rectangle.setPosition(sf::Vector2f{corner * winw - (30.f + i * 60.f) * (2 * corner - 1), 30.f});
-			render_target.draw(rectangle);
+			avatar.setPosition(sf::Vector2f{corner * winw - (30.f + i * 60.f) * (2 * corner - 1), 30.f});
+			render_target.draw(avatar);
 		}
 	}
 };
@@ -444,18 +454,24 @@ int main(int argc, char* argv[])
 	font.loadFromFile("/usr/share/fonts/TTF/DejaVuSansMono.ttf");
 
 	sf::Texture inst_tex;
-	if (!inst_tex.loadFromFile("img/inst.png"))
-	{
-		std::cerr << "Failed to load texture\n";
+	if (!load(inst_tex, "img/inst.png"))
 		return 1;
-	}
+
+	sf::Texture avatar_tex;
+	if (!load(avatar_tex, "img/player.png"))
+		return 1;
 
 	sf::Texture reticle_tex;
-	if (!reticle_tex.loadFromFile("img/reticle.png"))
-	{
-		std::cerr << "Failed to load texture\n";
+	if (!load(reticle_tex, "img/reticle.png"))
 		return 1;
-	}
+
+	sf::Texture aimbox_tex;
+	if (!load(aimbox_tex, "img/aimbox.png"))
+		return 1;
+
+	sf::Texture rope_tex;
+	if (!load(rope_tex, "img/rope.png"))
+		return 1;
 
 	bool restart = true;
 	while (restart)
@@ -474,8 +490,24 @@ int main(int argc, char* argv[])
 		inst.setPosition(winw / 2.f, winh / 2.f);
 
 		std::vector<Swinger*> players;
-		players.push_back(new Swinger {1.f * winw / 3.f - 20.f, winh - 20.f, sf::Color {203, 40, 20}, reticle_tex});
-		players.push_back(new Swinger {2.f * winw / 3.f + 20.f, winh - 20.f, sf::Color {243, 166, 10}, reticle_tex});
+		players.push_back(new Swinger {
+			1.f * winw / 3.f - 20.f,
+			winh - 20.f,
+			sf::Color {203, 40, 20},
+			avatar_tex,
+			reticle_tex,
+			aimbox_tex,
+			rope_tex
+		});
+		players.push_back(new Swinger {
+			2.f * winw / 3.f + 20.f,
+			winh - 20.f,
+			sf::Color {243, 166, 10},
+			avatar_tex,
+			reticle_tex,
+			aimbox_tex,
+			rope_tex
+		});
 
 		sf::Clock timer;
 		game_time = 0.f;
