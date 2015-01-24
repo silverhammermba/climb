@@ -73,9 +73,9 @@ public:
 		circle.setFillColor(sf::Color {0, 0, 255});
 	}
 
-	void draw_on(sf::RenderTexture& target)
+	void draw_on(sf::RenderTexture& render_target)
 	{
-		target.draw(circle);
+		render_target.draw(circle);
 	}
 };
 
@@ -89,7 +89,7 @@ class Swinger : Grappable
 	Grappable* nearest = nullptr;
 	// 0 = not grappling, 1 = moving toward point, 2 = swingin'
 	int grappling = 0;
-	float swing_dir = 1.f;
+	int swing_dir = 1;
 
 	float grap_dist = 200.f;
 	float grap_dist2;
@@ -97,12 +97,14 @@ class Swinger : Grappable
 	float pull_speed_factor = 0.04f;
 	float min_pull_speed = 1.f;
 	float swing_speed_factor = 10.f;
-	float min_swing_speed = 0.008f;
+	float min_base_speed = 0.2f;
 
 	float aiming = false;
 
 	float max_grapple_dist = 500.f;
 	float max_grapple_dist2;
+
+	int need_center = 0;
 
 	sf::Vector2f last_target_pos;
 public:
@@ -176,13 +178,30 @@ public:
 
 			float theta = atan2f(position.y - grapple_target->pos().y, position.x - grapple_target->pos().x);
 
-			float speed = sinf(theta) * swing_speed_factor / grap_dist;
+			float base_speed = sinf(theta);
 
-			// you're swinging too high, swing back towards middle
-			if (speed < min_swing_speed)
+			if (base_speed < min_base_speed)
 			{
-				swing_dir = (position.x - grapple_target->pos().x) / std::abs(position.x - grapple_target->pos().x);
-				speed = min_swing_speed;
+				float side = position.x - grapple_target->pos().x;
+				swing_dir = side / std::abs(side);
+				base_speed = min_base_speed;
+				need_center = swing_dir;
+			}
+
+			float speed = base_speed * swing_speed_factor / grap_dist;
+
+			if (need_center != 0.f)
+			{
+				float side = position.x - grapple_target->pos().x;
+				int ndir = side / std::abs(side);
+				if (ndir == need_center)
+				{
+					speed *= 1.3f;
+				}
+				else
+				{
+					need_center = 0;
+				}
 			}
 
 			theta += swing_dir * speed;
@@ -240,6 +259,12 @@ public:
 		return theta;
 	}
 
+	void stop_aim()
+	{
+		aiming = false;
+		nearest = nullptr;
+	}
+
 	// return distance squared from p to the ray from position to position+dir (or -1 if not near ray)
 	float dist2line(const sf::Vector2f& dir, const sf::Vector2f& p)
 	{
@@ -264,12 +289,14 @@ public:
 	{
 		rectangle.setPosition(position);
 		render_target.draw(rectangle);
+	}
 
+	void draw_target_on(sf::RenderTexture& render_target)
+	{
 		if (aiming)
 		{
 			aimbox.setPosition(position);
 			render_target.draw(aimbox);
-			aiming = false;
 
 			if (nearest)
 			{
@@ -284,8 +311,8 @@ int main(int argc, char* argv[])
 {
 	sf::RenderWindow window {sf::VideoMode {winw, winh}, "Test"};
 
-	sf::RenderTexture target;
-	if (!target.create(winw, winh))
+	sf::RenderTexture render_target;
+	if (!render_target.create(winw, winh))
 	{
 		std::cerr << "Failed to create render texture\n";
 		return 1;
@@ -357,9 +384,9 @@ int main(int argc, char* argv[])
 
 				// deadzone check
 				if (norm(aim) > 50.f)
-				{
-					float theta = players[i]->aim(aim, players, points);
-				}
+					players[i]->aim(aim, players, points);
+				else
+					players[i]->stop_aim();
 			}
 
 			while (game_step > 0 && last_frame_time > game_step)
@@ -371,18 +398,20 @@ int main(int argc, char* argv[])
 			}
 
 			// draw on render texture
-			target.clear(background);
+			render_target.clear(background);
 			for (auto& point : points)
-				point->draw_on(target);
+				point->draw_on(render_target);
 			for (auto& player : players)
-				player->draw_on(target);
-			target.display();
+				player->draw_on(render_target);
+			for (auto& player : players)
+				player->draw_target_on(render_target);
+			render_target.display();
 
 			// draw with full screen effects
 			fx.setParameter("time", timer.getElapsedTime().asSeconds());
 
 			window.clear();
-			window.draw(sf::Sprite {target.getTexture()}, &fx);
+			window.draw(sf::Sprite {render_target.getTexture()}, &fx);
 			window.display();
 
 			last_frame_time += frame_timer.getElapsedTime().asMilliseconds();
