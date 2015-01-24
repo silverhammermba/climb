@@ -104,6 +104,7 @@ class Swinger : Grappable
 	float max_grapple_dist = 500.f;
 	float max_grapple_dist2;
 
+	sf::Vector2f last_target_pos;
 public:
 	Swinger(float x, float y)
 		: Grappable {x, y}, rectangle {sf::Vector2f{40.f, 40.f}}, reticle {sf::Vector2f{20.f, 20.f}}
@@ -164,11 +165,15 @@ public:
 		else if (grappling == 1)
 		{
 			grappling = 2;
+			last_target_pos = grapple_target->pos();
 		}
 
 		// if swinging
 		if (grappling == 2)
 		{
+			// first update my position in case target moved
+			position += grapple_target->pos() - last_target_pos;
+
 			float theta = atan2f(position.y - grapple_target->pos().y, position.x - grapple_target->pos().x);
 
 			float speed = sinf(theta) * swing_speed_factor / grap_dist;
@@ -184,6 +189,8 @@ public:
 
 			position.x = cosf(theta) * grap_dist + grapple_target->pos().x;
 			position.y = sinf(theta) * grap_dist + grapple_target->pos().y;
+
+			last_target_pos = grapple_target->pos();
 		}
 	}
 
