@@ -277,7 +277,9 @@ int main(int argc, char* argv[])
 	{
 		sf::Color background {0, 0, 0};
 
-		Swinger p1 {winw / 2.f - 20.f, winh - 20.f};
+		std::vector<Swinger*> players;
+		players.push_back(new Swinger {winw / 2.f - 20.f, winh - 20.f});
+		players.push_back(new Swinger {winw / 2.f + 20.f, winh - 20.f});
 
 		sf::Clock timer;
 		sf::Clock frame_timer;
@@ -301,7 +303,10 @@ int main(int argc, char* argv[])
 				}
 				if (event.type == sf::Event::JoystickButtonPressed && event.joystickButton.button == 0)
 				{
-					p1.gogo();
+					if (event.joystickButton.joystickId < players.size())
+					{
+						players[event.joystickButton.joystickId]->gogo();
+					}
 				}
 				if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::R)
 				{
@@ -309,19 +314,21 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			sf::Vector2f aim {sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::Y)};
-
-			// deadzone check
-			if (norm(aim) > 50.f)
+			for (int i = 0; i < players.size(); ++i)
 			{
-				float theta = p1.aim(aim, grapples);
+				sf::Vector2f aim {sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::Y)};
 
-				Grappable* nearest = nullptr;
+				// deadzone check
+				if (norm(aim) > 50.f)
+				{
+					float theta = players[i]->aim(aim, grapples);
+				}
 			}
 
 			while (game_step > 0 && last_frame_time > game_step)
 			{
-				p1.grapple();
+				for (auto& player : players)
+					player->grapple();
 
 				last_frame_time -= game_step;
 			}
@@ -330,7 +337,8 @@ int main(int argc, char* argv[])
 			target.clear(background);
 			for (auto& grapple : grapples)
 				grapple.draw_on(target);
-			p1.draw_on(target);
+			for (auto& player : players)
+				player->draw_on(target);
 			target.display();
 
 			// draw with full screen effects
