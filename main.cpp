@@ -753,7 +753,7 @@ int main(int argc, char* argv[])
 			sf::Event event;
 			while (window.pollEvent(event))
 			{
-				if (event.type == sf::Event::Closed || event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::Escape)
+				if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::Escape))
 				{
 					running = false;
 					restart = false;
@@ -848,7 +848,7 @@ int main(int argc, char* argv[])
 			sf::Event event;
 			while (window.pollEvent(event))
 			{
-				if (event.type == sf::Event::Closed || event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::Escape)
+				if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::Escape))
 				{
 					running = false;
 					restart = false;
