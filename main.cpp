@@ -527,17 +527,18 @@ int main(int argc, char* argv[])
 		bool gameover = false;
 
 		sf::Sprite bg {bg_tex};
-		auto s = bg_tex.getSize();
-		bg.setScale(4.f, 4.f);
-		bg.setTextureRect(sf::IntRect{0, 0, s.x, winh * 2});
-		bg.setPosition(0, -(int)winh);
+		float bg_scale = 4.f;
+		auto bg_s = bg_tex.getSize();
+		bg.setScale(bg_scale, bg_scale);
+		bg.setTextureRect(sf::IntRect{0, 0, bg_s.x, winh / bg_scale + bg_s.y});
+		bg.setPosition(0, -(int)bg_s.y);
 
 		sf::Sprite floor {floor_tex};
 		floor.setScale(4.f, 4.f);
 		floor.setPosition(0, winh - 30.f);
 
 		sf::Sprite inst {inst_tex};
-		s = inst_tex.getSize();
+		auto s = inst_tex.getSize();
 		inst.setOrigin(s.x / 2.f, s.y / 2.f);
 		inst.setScale(4.f, 4.f);
 		inst.setPosition(winw / 2.f, winh / 2.f);
@@ -748,6 +749,11 @@ int main(int argc, char* argv[])
 			}
 
 			float top = camera.getCenter().y - camera.getSize().y / 2.f;
+
+			if (top < bg.getPosition().y)
+			{
+				bg.move(0, -(int)bg_s.y * 4.f);
+			}
 
 			if (!gameover)
 			{
