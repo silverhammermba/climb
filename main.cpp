@@ -185,7 +185,7 @@ public:
 		position.y = winh - half_height;
 
 		avatar.setOrigin(s.x / 2.f, s.y / 2.f);
-		avatar.setScale(scale, scale);
+		avatar.setScale(scale * (index == 1 ? -1.f : 1.f), scale);
 		avatar.setColor(color);
 
 		s = reticle_tex.getSize();
@@ -196,7 +196,7 @@ public:
 		s = aimbox_tex.getSize();
 		aimbox.setOrigin(s.x / -2.f, s.y / 2.f);
 		aimbox.setScale(scale, scale);
-		aimbox.setColor(sf::Color {color.r, color.g, color.b, 170});
+		aimbox.setColor(sf::Color {color.r, color.g, color.b, 100});
 
 		s = rope_tex.getSize();
 		rope.setOrigin(0.f, s.y / 2.f);
@@ -653,6 +653,10 @@ int main(int argc, char* argv[])
 	if (!load(floor_tex, "img/floor.png"))
 		return 1;
 
+	sf::Texture start_tex;
+	if(!load(start_tex, "img/start.png"))
+		return 1;
+
 	sf::Texture inst_tex;
 	if (!load(inst_tex, "img/inst.png"))
 		return 1;
@@ -717,8 +721,14 @@ int main(int argc, char* argv[])
 		floor.setScale(4.f, 4.f);
 		floor.setPosition(0, winh - 30.f);
 
+		sf::Sprite start {start_tex};
+		auto s = start_tex.getSize();
+		start.setOrigin(s.x / 2.f, s.y / 2.f);
+		start.setScale(4.f, 4.f);
+		start.setPosition(winw / 2.f, winh - 100.f);
+
 		sf::Sprite inst {inst_tex};
-		auto s = inst_tex.getSize();
+		s = inst_tex.getSize();
 		inst.setOrigin(s.x / 2.f, s.y / 2.f);
 		inst.setScale(4.f, 4.f);
 		inst.setPosition(winw / 2.f, winh / 2.f);
@@ -735,7 +745,7 @@ int main(int argc, char* argv[])
 			"GIUSEPPE",
 			font,
 			1.f * winw / 3.f,
-			sf::Color {203, 40, 20},
+			sf::Color {45, 185, 210},
 			avatar_tex,
 			reticle_tex,
 			aimbox_tex,
@@ -746,7 +756,7 @@ int main(int argc, char* argv[])
 			"FRANK",
 			font,
 			2.f * winw / 3.f,
-			sf::Color {243, 166, 10},
+			sf::Color {53, 152, 38},
 			avatar_tex,
 			reticle_tex,
 			aimbox_tex,
@@ -795,7 +805,7 @@ int main(int argc, char* argv[])
 		camera.setCenter(winw / 2.f, winh / 2.f + 300.f);
 
 		bool running = true;
-		bool cutscene = false; // TODO for testing
+		bool cutscene = true; // TODO for testing
 		int cutphase = 0;
 		while (cutscene && running)
 		{
@@ -835,6 +845,7 @@ int main(int argc, char* argv[])
 			render_target.clear();
 			render_target.draw(bg);
 			render_target.draw(floor);
+			render_target.draw(start);
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
@@ -870,6 +881,7 @@ int main(int argc, char* argv[])
 			render_target.clear();
 			render_target.draw(bg);
 			render_target.draw(floor);
+			render_target.draw(start);
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
@@ -985,7 +997,7 @@ int main(int argc, char* argv[])
 							{
 								gameover = true;
 								std::stringstream s;
-								s << "GAME OVER. SCORE: " << (render_target.getDefaultView().getCenter().y - camera.getCenter().y);
+								s << "GAME OVER. SCORE: " << (render_target.getDefaultView().getCenter().y - camera.getCenter().y) << ". PRESS R TO RESTART";
 								got.setString(s.str());
 								auto bounds = got.getLocalBounds();
 								got.setOrigin(bounds.width / 2.f, bounds.height / 2.f);
@@ -1122,6 +1134,7 @@ int main(int argc, char* argv[])
 			render_target.draw(bg);
 			render_target.draw(floor);
 
+			render_target.draw(start);
 			render_target.draw(inst);
 			render_target.draw(snap);
 
@@ -1137,7 +1150,9 @@ int main(int argc, char* argv[])
 			// gui
 			render_target.setView(render_target.getDefaultView());
 			if (gameover)
+			{
 				render_target.draw(got);
+			}
 
 			for (auto& player : players)
 				player->draw_lives_on(render_target);
