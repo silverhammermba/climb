@@ -5,7 +5,6 @@
 #include <list>
 #include <sstream>
 #include <vector>
-#include <bsd/stdlib.h>
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
@@ -20,17 +19,12 @@ using std::rand;
 
 float randmf()
 {
-	return arc4random() / (float)(UINT32_MAX);
-}
-
-uint32_t randm()
-{
-	return arc4random();
+	return rand() / (float)RAND_MAX;
 }
 
 uint32_t randm(uint32_t max)
 {
-	return arc4random_uniform(max);
+	return rand() % max;
 }
 
 bool load(sf::Texture& tex, const std::string& file)
@@ -610,6 +604,7 @@ public:
 
 int main(int argc, char* argv[])
 {
+	srand(time(nullptr));
 	sf::VideoMode mode = sf::VideoMode::getFullscreenModes()[0];
 	winw = mode.width;
 	winh = mode.height;
