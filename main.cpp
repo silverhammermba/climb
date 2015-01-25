@@ -253,6 +253,7 @@ public:
 	{
 		--lives;
 		let_go();
+		texttime = -1.f;
 		dead = true;
 		dead_timer.restart();
 	}
