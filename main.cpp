@@ -928,6 +928,8 @@ int main(int argc, char* argv[])
 						}
 						else if (!intro && event.joystickButton.button == 1)
 							players[event.joystickButton.joystickId]->let_go();
+						else if (gameover && event.joystickButton.button == 3)
+							running = false;
 					}
 				}
 				if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::R)
@@ -1002,7 +1004,7 @@ int main(int argc, char* argv[])
 							{
 								gameover = true;
 								std::stringstream s;
-								s << "GAME OVER. SCORE: " << (render_target.getDefaultView().getCenter().y - camera.getCenter().y) << ". PRESS R TO RESTART";
+								s << "GAME OVER. SCORE: " << (render_target.getDefaultView().getCenter().y - camera.getCenter().y) << ". PRESS Y TO RESTART";
 								got.setString(s.str());
 								auto bounds = got.getLocalBounds();
 								got.setOrigin(bounds.width / 2.f, bounds.height / 2.f);
