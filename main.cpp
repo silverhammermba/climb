@@ -196,7 +196,7 @@ public:
 		s = aimbox_tex.getSize();
 		aimbox.setOrigin(s.x / -2.f, s.y / 2.f);
 		aimbox.setScale(scale, scale);
-		aimbox.setColor(sf::Color {color.r, color.g, color.b, 50});
+		aimbox.setColor(sf::Color {color.r, color.g, color.b, 170});
 
 		s = rope_tex.getSize();
 		rope.setOrigin(0.f, s.y / 2.f);
@@ -426,6 +426,10 @@ public:
 
 			// can't grapple someone grappling self
 			if (player->target() == this)
+				continue;
+
+			// can't grapple dead players
+			if (player->is_dead())
 				continue;
 
 			// skip players already being grappled
