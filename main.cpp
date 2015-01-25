@@ -1054,7 +1054,7 @@ int main(int argc, char* argv[])
 					{
 						// random angle
 						int side = randm(2);
-						float theta = (randmf() + 1.f) * M_PI / 8.f;
+						float theta = (randmf() + 2.f) * M_PI / 9.f;
 						if (side)
 							theta = -theta;
 						else
