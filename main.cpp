@@ -141,10 +141,13 @@ class Swinger : public Grappable
 
 	float half_height;
 	float half_width;
+
+	int index;
 public:
-	Swinger(float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
+	Swinger(int i, float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
 		: Grappable {x, 0.f}, avatar {avatar_tex}, reticle {reticle_tex}, aimbox {aimbox_tex}, rope {rope_tex}
 	{
+		index = i;
 		auto s = avatar_tex.getSize();
 		float scale = 4.f;
 		half_height = s.y * scale / 2.f;
@@ -419,17 +422,17 @@ public:
 			if (nearest)
 			{
 				reticle.setPosition(nearest->pos());
-				reticle.setRotation(game_time * 10);
+				reticle.setRotation(game_time * 10 + 45 * index);
 				render_target.draw(reticle);
 			}
 		}
 	}
 
-	void draw_lives_on(sf::RenderTexture& render_target, int corner)
+	void draw_lives_on(sf::RenderTexture& render_target)
 	{
 		for (int i = 0; i < lives; ++i)
 		{
-			avatar.setPosition(sf::Vector2f{corner * winw - (30.f + i * 60.f) * (2 * corner - 1), 30.f});
+			avatar.setPosition(sf::Vector2f{index * winw - (30.f + i * 60.f) * (2 * index - 1), 30.f});
 			render_target.draw(avatar);
 		}
 	}
@@ -521,7 +524,7 @@ int main(int argc, char* argv[])
 	while (restart)
 	{
 		sf::View camera = render_target.getDefaultView();
-		float camera_speed_factor = -0.001f;
+		float camera_speed_factor = -0.0005f;
 
 		bool intro = true;
 		bool gameover = false;
@@ -551,6 +554,7 @@ int main(int argc, char* argv[])
 
 		std::vector<Swinger*> players;
 		players.push_back(new Swinger {
+			0,
 			1.f * winw / 3.f,
 			sf::Color {203, 40, 20},
 			avatar_tex,
@@ -559,6 +563,7 @@ int main(int argc, char* argv[])
 			rope_tex
 		});
 		players.push_back(new Swinger {
+			1,
 			2.f * winw / 3.f,
 			sf::Color {243, 166, 10},
 			avatar_tex,
@@ -577,7 +582,7 @@ int main(int argc, char* argv[])
 		got.setFont(font);
 		got.setCharacterSize(32);
 
-		float min_dist = 150.f;
+		float min_dist = 200.f;
 		float easy_dist = 350.f;
 
 		std::list<Point*> points;
@@ -901,10 +906,8 @@ int main(int argc, char* argv[])
 			if (gameover)
 				render_target.draw(got);
 
-			for (unsigned int i = 0; i < players.size(); ++i)
-			{
-				players[i]->draw_lives_on(render_target, i);
-			}
+			for (auto& player : players)
+				player->draw_lives_on(render_target);
 
 			render_target.display();
 
