@@ -1,6 +1,6 @@
 SOURCE=main.cpp
 EXE=climb
-CXXFLAGS=-std=c++11 -Wall -Wextra -Wfatal-errors -ggdb -pg
+CXXFLAGS=-std=c++11 -Wall -Wextra -Wfatal-errors -O2
 
 ifdef WINDOWS
 EXE:=$(EXE).exe

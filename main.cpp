@@ -123,6 +123,8 @@ public:
 
 class Swinger : public Grappable
 {
+	std::string name;
+
 	sf::Sprite avatar;
 	sf::Sprite reticle;
 	sf::Sprite aimbox;
@@ -166,8 +168,6 @@ class Swinger : public Grappable
 	float texttime = -1.f;
 	sf::FloatRect textbounds;
 	sf::ConvexShape textarrow;
-
-	std::string name;
 
 	bool dead = false;
 	bool reviving = false;
@@ -415,7 +415,7 @@ public:
 		aiming = true;
 
 		nearest = nullptr;
-		float ndist2;
+		float ndist2 = -1.f;
 
 		for (auto& player : players)
 		{
@@ -631,6 +631,7 @@ int main(int argc, char* argv[])
 	fx.setParameter("texture", sf::Shader::CurrentTexture);
 	fx.setParameter("winw", (float)winw);
 	fx.setParameter("winh", (float)winh);
+	fx.setParameter("start_time", -1.f);
 
 	gravity.x = 0.f;
 	gravity.y = 0.003f;
@@ -699,7 +700,7 @@ int main(int argc, char* argv[])
 		float bg_scale = 4.f;
 		auto bg_s = bg_tex.getSize();
 		bg.setScale(bg_scale, bg_scale);
-		bg.setTextureRect(sf::IntRect{0, 0, bg_s.x, winh / bg_scale + bg_s.y});
+		bg.setTextureRect(sf::IntRect{0, 0, (int)bg_s.x, (int)(winh / bg_scale) + (int)bg_s.y});
 		bg.setPosition(0, -(int)bg_s.y);
 
 		sf::Sprite floor {floor_tex};
@@ -784,7 +785,7 @@ int main(int argc, char* argv[])
 		camera.setCenter(winw / 2.f, winh / 2.f + 300.f);
 
 		bool running = true;
-		bool cutscene = true;
+		bool cutscene = false; // TODO for testing
 		int cutphase = 0;
 		while (cutscene && running)
 		{
@@ -1087,6 +1088,7 @@ int main(int argc, char* argv[])
 					{
 						intro = false;
 						game_start_time = game_time;
+						fx.setParameter("start_time", game_start_time);
 					}
 				}
 				if (!intro)
