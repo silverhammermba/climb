@@ -150,9 +150,11 @@ class Swinger : public Grappable
 	float texttime = -1.f;
 	sf::FloatRect textbounds;
 	sf::ConvexShape textarrow;
+
+	std::string name;
 public:
-	Swinger(int i, const sf::Font& font, float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
-		: Grappable {x, 0.f}, avatar {avatar_tex}, reticle {reticle_tex}, aimbox {aimbox_tex}, rope {rope_tex}
+	Swinger(int i, const std::string& nm, const sf::Font& font, float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
+		: Grappable {x, 0.f}, name {nm}, avatar {avatar_tex}, reticle {reticle_tex}, aimbox {aimbox_tex}, rope {rope_tex}
 	{
 		index = i;
 		auto s = avatar_tex.getSize();
@@ -195,6 +197,11 @@ public:
 		textarrow.setOrigin(0.f, 5.f);
 	}
 
+	const std::string& get_name()
+	{
+		return name;
+	}
+
 	void say(const std::string& txt, float time)
 	{
 		textbox.setString(txt);
@@ -202,6 +209,11 @@ public:
 		textboxbox.setSize(sf::Vector2f{textbounds.width + 20.f, textbounds.height + 20.f});
 		texttimer.restart();
 		texttime = time;
+	}
+
+	void lament(const std::string nm)
+	{
+		say(nm + "!!!!", 3);
 	}
 
 	int get_lives() const
@@ -622,6 +634,7 @@ int main(int argc, char* argv[])
 		std::vector<Swinger*> players;
 		players.push_back(new Swinger {
 			0,
+			"GIUSEPPE",
 			font,
 			1.f * winw / 3.f,
 			sf::Color {203, 40, 20},
@@ -632,6 +645,7 @@ int main(int argc, char* argv[])
 		});
 		players.push_back(new Swinger {
 			1,
+			"FRANK",
 			font,
 			2.f * winw / 3.f,
 			sf::Color {243, 166, 10},
@@ -857,6 +871,10 @@ int main(int argc, char* argv[])
 						{
 							if (ps->target() == player)
 								ps->let_go();
+							else if (ps != player && ps->is_grappling())
+							{
+								ps->lament(player->get_name());
+							}
 						}
 
 						if (player->get_lives() < 0)
