@@ -613,7 +613,7 @@ int main(int argc, char* argv[])
 	sf::VideoMode mode = sf::VideoMode::getFullscreenModes()[0];
 	winw = mode.width;
 	winh = mode.height;
-	sf::RenderWindow window {mode, "TODO", sf::Style::Fullscreen};
+	sf::RenderWindow window {mode, "Viking Climb", sf::Style::Fullscreen};
 
 	sf::RenderTexture render_target;
 	if (!render_target.create(winw, winh))
@@ -805,7 +805,7 @@ int main(int argc, char* argv[])
 		camera.setCenter(winw / 2.f, winh / 2.f + 300.f);
 
 		bool running = true;
-		bool cutscene = true; // TODO for testing
+		bool cutscene = true;
 		int cutphase = 0;
 		while (cutscene && running)
 		{

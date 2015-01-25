@@ -93,7 +93,7 @@ vec4 bloom(vec2 pix, vec4 color, float glowsize)
 	vec4 source = tex_at(pix);
 	vec4 sum = vec4(0);
 	int diff = (samples - 1) / 2;
-	vec2 sizeFactor = vec2(1) * glowsize;
+	vec2 sizeFactor = vec2(glowsize);
 
 	for (int x = -diff; x <= diff; x++)
 	{
@@ -112,7 +112,8 @@ vec4 bloom(vec2 pix, vec4 color, float glowsize)
 void main()
 {
 	float n1 = snoise(gl_FragCoord.xy * 20.0 / vec2(winw, winh) + vec2(time, -time));
-	vec4 lava = vec4(1.0, 0.0, 0.0, 1.0);
+	float n2 = snoise(gl_FragCoord.xy * 5.0 / vec2(winw, winh) + vec2(time / 3.0, -time / 2.0));
+	vec4 lava = vec4(1.2, 0.1 * n2, 0.0, 1.0);
 
 	// calculate normal pixels
 	vec4 normpix = tex_at(gl_FragCoord.xy);
@@ -127,7 +128,7 @@ void main()
 		// darken higher pixels
 		normpix /= (1.0 + smoothstep(start_time, start_time + 0.2, time) * 0.3);
 		// and lower pixels blend to lava
-		t = smoothstep(0.0, 300.0, gl_FragCoord.y + n1 * 10.0);
+		t = smoothstep(0.0, 200.0, gl_FragCoord.y + n1 * 10.0);
 	}
 
 	vec4 pixel = mix(glowpix, normpix, t);
