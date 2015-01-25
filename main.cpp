@@ -166,7 +166,7 @@ public:
 
 		s = rope_tex.getSize();
 		rope.setOrigin(0.f, s.y / 2.f);
-		rope.setColor(sf::Color {color.r / 3, color.g / 3, color.b / 3});
+		rope.setColor(sf::Color {(sf::Uint8)(color.r / 3), (sf::Uint8)(color.g / 3), (sf::Uint8)(color.b / 3)});
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
 		max_target_dist2 = max_target_dist * max_target_dist;
@@ -394,7 +394,7 @@ public:
 
 		auto bounds = rope.getLocalBounds();
 		rope.setScale(4.f, 4.f);
-		rope.setTextureRect(sf::IntRect {0, 0, dist(position, grapple_target->pos()) / 4.f, bounds.height});
+		rope.setTextureRect(sf::IntRect {0, 0, (int)(dist(position, grapple_target->pos()) / 4.f), (int)bounds.height});
 
 		rope.setPosition(position);
 		sf::Vector2f dir = grapple_target->pos() - position;
@@ -472,6 +472,10 @@ int main(int argc, char* argv[])
 	if (!load(inst_tex, "img/inst.png"))
 		return 1;
 
+	sf::Texture snap_tex;
+	if (!load(snap_tex, "img/snap.png"))
+		return 1;
+
 	sf::Texture avatar_tex;
 	if (!load(avatar_tex, "img/player.png"))
 		return 1;
@@ -489,6 +493,12 @@ int main(int argc, char* argv[])
 		return 1;
 	rope_tex.setRepeated(true);
 
+	for (int i = 0; i < 2; ++i)
+	{
+		if (!sf::Joystick::isConnected(i))
+			return 1;
+	}
+
 	bool restart = true;
 	while (restart)
 	{
@@ -501,10 +511,16 @@ int main(int argc, char* argv[])
 		sf::Color background {0, 0, 0};
 
 		sf::Sprite inst {inst_tex};
-		auto inst_s = inst_tex.getSize();
-		inst.setOrigin(inst_s.x / 2.f, inst_s.y / 2.f);
+		auto s = inst_tex.getSize();
+		inst.setOrigin(s.x / 2.f, s.y / 2.f);
 		inst.setScale(4.f, 4.f);
 		inst.setPosition(winw / 2.f, winh / 2.f);
+
+		sf::Sprite snap {snap_tex};
+		s = snap_tex.getSize();
+		snap.setOrigin(s.x / 2.f, s.y / 2.f);
+		snap.setScale(4.f, 4.f);
+		snap.setPosition(winw / 2.f, winh / 2.f - winh);
 
 		std::vector<Swinger*> players;
 		players.push_back(new Swinger {
@@ -528,7 +544,7 @@ int main(int argc, char* argv[])
 		game_time = 0.f;
 		float game_start_time = 0.f;
 		sf::Clock frame_timer;
-		int last_frame_time = 0;
+		unsigned int last_frame_time = 0;
 
 		sf::Text got;
 		got.setFont(font);
@@ -609,10 +625,12 @@ int main(int argc, char* argv[])
 			game_time = timer.getElapsedTime().asSeconds();
 		}
 
-		sf::Clock transition;
-		while (running && transition.getElapsedTime().asSeconds() < 1.f)
+		// transition to normal camera
+		while (running)
 		{
 			float zdiff = render_target.getDefaultView().getSize().x / camera.getSize().x;
+			if (zdiff < 1.01f)
+				break;
 			camera.zoom((zdiff - 1.f) / 2.f + 1.f);
 			camera.move((render_target.getDefaultView().getCenter() - camera.getCenter()) / 3.f);
 
@@ -670,7 +688,7 @@ int main(int argc, char* argv[])
 
 			if (!gameover)
 			{
-				for (int i = 0; i < players.size(); ++i)
+				for (unsigned int i = 0; i < players.size(); ++i)
 				{
 					sf::Vector2f aim {sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::Y)};
 
@@ -753,9 +771,8 @@ int main(int argc, char* argv[])
 			{
 				float last_highest = highest_point;
 				int last_size = points.size();
-				bool new_high = false;
 				// generate 1-4 more points
-				int new_points = rand() % 4 + 1;
+				unsigned int new_points = rand() % 4 + 1;
 
 				while (points.size() - last_size < new_points)
 				{
@@ -784,7 +801,6 @@ int main(int argc, char* argv[])
 
 								if (p.y < highest_point)
 								{
-									new_high = true;
 									highest_point = p.y;
 								}
 								// need to break because iterator is invalid now
@@ -832,6 +848,7 @@ int main(int argc, char* argv[])
 			render_target.setView(camera);
 
 			render_target.draw(inst);
+			render_target.draw(snap);
 
 			for (auto& player : players)
 				player->draw_rope_on(render_target);
@@ -847,7 +864,7 @@ int main(int argc, char* argv[])
 			if (gameover)
 				render_target.draw(got);
 
-			for (int i = 0; i < players.size(); ++i)
+			for (unsigned int i = 0; i < players.size(); ++i)
 			{
 				players[i]->draw_lives_on(render_target, i);
 			}
