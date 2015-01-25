@@ -475,6 +475,10 @@ int main(int argc, char* argv[])
 		return 1;
 	bg_tex.setRepeated(true);
 
+	sf::Texture floor_tex;
+	if (!load(floor_tex, "img/floor.png"))
+		return 1;
+
 	sf::Texture inst_tex;
 	if (!load(inst_tex, "img/inst.png"))
 		return 1;
@@ -527,6 +531,10 @@ int main(int argc, char* argv[])
 		bg.setScale(4.f, 4.f);
 		bg.setTextureRect(sf::IntRect{0, 0, s.x, winh * 2});
 		bg.setPosition(0, -(int)winh);
+
+		sf::Sprite floor {floor_tex};
+		floor.setScale(4.f, 4.f);
+		floor.setPosition(0, winh - 30.f);
 
 		sf::Sprite inst {inst_tex};
 		s = inst_tex.getSize();
@@ -623,6 +631,7 @@ int main(int argc, char* argv[])
 			render_target.setView(camera);
 			render_target.clear();
 			render_target.draw(bg);
+			render_target.draw(floor);
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
@@ -657,6 +666,7 @@ int main(int argc, char* argv[])
 			render_target.setView(camera);
 			render_target.clear();
 			render_target.draw(bg);
+			render_target.draw(floor);
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
@@ -866,6 +876,7 @@ int main(int argc, char* argv[])
 			render_target.setView(camera);
 			render_target.clear();
 			render_target.draw(bg);
+			render_target.draw(floor);
 
 			render_target.draw(inst);
 			render_target.draw(snap);
