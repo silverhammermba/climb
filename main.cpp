@@ -233,7 +233,7 @@ public:
 
 	void lament(const std::string nm)
 	{
-		int r = randm(5);
+		int r = randm(10);
 		std::string l;
 		switch (r)
 		{
@@ -251,6 +251,21 @@ public:
 				break;
 			case 4:
 				l = "HE WAS ONLY TWO DAYS FROM RETIREMENT!";
+				break;
+			case 5:
+				l = "NO! TAKE ME INSTEAD!";
+				break;
+			case 6:
+				l = "I CAN'T BEAR TO LIVE WITHOUT YOU, " + nm;
+				break;
+			case 7:
+				l = "HOW DID IT COME TO THIS???";
+				break;
+			case 8:
+				l = "I WILL LOVE YOU FOREVER, " + nm;
+				break;
+			case 9:
+				l = "I MUST BE STRONG. FOR " + nm;
 				break;
 		}
 		say(l, 3);
