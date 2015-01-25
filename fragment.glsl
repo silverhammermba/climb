@@ -127,7 +127,7 @@ void main()
 		// darken higher pixels
 		normpix /= (1.0 + smoothstep(start_time, start_time + 0.2, time) * 0.3);
 		// and lower pixels blend to lava
-		t = smoothstep(0.0, 300.0, gl_FragCoord.y);
+		t = smoothstep(0.0, 300.0, gl_FragCoord.y + n1 * 10.0);
 	}
 
 	vec4 pixel = mix(glowpix, normpix, t);
