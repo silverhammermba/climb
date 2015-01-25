@@ -881,6 +881,7 @@ int main(int argc, char* argv[])
 			render_target.clear();
 			render_target.draw(bg);
 			render_target.draw(floor);
+			render_target.draw(inst);
 			render_target.draw(start);
 			for (auto& point : points)
 				point->draw_on(render_target);
