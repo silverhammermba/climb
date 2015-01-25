@@ -251,22 +251,22 @@ public:
 				l = nm + ", I WILL TELL YOUR FAMILY THAT YOU LOVE THEM!";
 				break;
 			case 4:
-				l = "HE WAS ONLY TWO DAYS FROM RETIREMENT!";
+				l = nm + "... HE WAS ONLY TWO DAYS FROM RETIREMENT...";
 				break;
 			case 5:
-				l = "NO! TAKE ME INSTEAD!";
+				l = "NO! " + nm + "! TAKE ME INSTEAD!";
 				break;
 			case 6:
-				l = "I CAN'T BEAR TO LIVE WITHOUT YOU, " + nm;
+				l = "I CAN'T BEAR TO LIVE WITHOUT YOU, " + nm + "!";
 				break;
 			case 7:
-				l = "HOW DID IT COME TO THIS???";
+				l = nm + "! HOW DID IT COME TO THIS???";
 				break;
 			case 8:
-				l = "I WILL LOVE YOU FOREVER, " + nm;
+				l = "I WILL LOVE YOU FOREVER, " + nm + "!";
 				break;
 			case 9:
-				l = "I MUST BE STRONG. FOR " + nm;
+				l = "I MUST BE STRONG. FOR " + nm + "!";
 				break;
 		}
 		say(l, 3);
