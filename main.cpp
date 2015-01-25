@@ -583,8 +583,9 @@ int main(int argc, char* argv[])
 		got.setFont(font);
 		got.setCharacterSize(32);
 
-		float min_dist = 200.f;
+		float min_dist = 150.f;
 		float easy_dist = 350.f;
+		float hard_dist = 400.f;
 
 		std::list<Point*> points;
 		// starting points
@@ -820,8 +821,12 @@ int main(int argc, char* argv[])
 					for (auto& point : points)
 					{
 						// random angle
-						float theta = (4.f * (rand() / (float)RAND_MAX) + 1.f) * M_PI / -6.f;
-						sf::Vector2f p {point->pos().x + cosf(theta) * easy_dist, point->pos().y + sinf(theta) * easy_dist};
+						int side = rand() % 2;
+						float theta = -M_PI / 8.f - (rand() / (float)RAND_MAX) * M_PI / -8.f - (side * 5 * M_PI) / 8.f;
+
+						int difficulty = rand() % 2 == 0 ? easy_dist : hard_dist;
+
+						sf::Vector2f p {point->pos().x + cosf(theta) * difficulty, point->pos().y + sinf(theta) * difficulty};
 
 						// want it in bounds and at least one point higher than the previous
 						// XXX copied from Swinger class
