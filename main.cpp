@@ -706,6 +706,7 @@ int main(int argc, char* argv[])
 
 		sf::View camera = render_target.getDefaultView();
 		float camera_speed_factor = -0.0005f;
+		float camera_speed_boost = 0.f;
 
 		bool intro = true;
 		bool gameover = false;
@@ -785,7 +786,8 @@ int main(int argc, char* argv[])
 		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 500.f, point_tex});
 		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 650.f, point_tex});
 		// long grapple
-		points.push_back(new Point {2.f * winw / 3.f - 450.f, winh - 800.f, point_tex});
+		Point* long_grapple = new Point {2.f * winw / 3.f - 450.f, winh - 800.f, point_tex};
+		points.push_back(long_grapple);
 
 		// segue to normal gen
 		points.push_back(new Point {winw / 2.f - 300.f, winh - 1000.f, point_tex});
@@ -921,7 +923,9 @@ int main(int argc, char* argv[])
 					if (event.joystickButton.joystickId < players.size())
 					{
 						if (event.joystickButton.button == 0)
+						{
 							players[event.joystickButton.joystickId]->grapple();
+						}
 						else if (!intro && event.joystickButton.button == 1)
 							players[event.joystickButton.joystickId]->let_go();
 					}
@@ -1038,6 +1042,10 @@ int main(int argc, char* argv[])
 						}
 					}
 				}
+
+				for (auto& player : players)
+					if (player->target() == (Grappable*)long_grapple)
+						camera_speed_boost = -0.015f;
 			}
 
 			// generate level if the highest point is on the screen
@@ -1054,7 +1062,7 @@ int main(int argc, char* argv[])
 					{
 						// random angle
 						int side = randm(2);
-						float theta = (randmf() + 2.f) * M_PI / 9.f;
+						float theta = (randmf() + 1.f) * M_PI / 9.f;
 						if (side)
 							theta = -theta;
 						else
@@ -1122,7 +1130,7 @@ int main(int argc, char* argv[])
 				}
 				if (!intro)
 				{
-					float camera_speed = (game_time - game_start_time) * camera_speed_factor;
+					float camera_speed = (game_time - game_start_time) * camera_speed_factor + camera_speed_boost;
 					camera.move(0, camera_speed * game_step);
 				}
 
