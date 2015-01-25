@@ -88,19 +88,20 @@ public:
 
 class Point : public Grappable
 {
-	sf::CircleShape circle;
+	sf::Sprite sprite;
 public:
-	Point(float x, float y)
-		: Grappable {x, y}, circle {10.f}
+	Point(float x, float y, const sf::Texture& texture)
+		: Grappable {x, y}, sprite {texture}
 	{
-		circle.setOrigin(10.f, 10.f);
-		circle.setPosition(position);
-		circle.setFillColor(sf::Color {0, 0, 255});
+		auto s = texture.getSize();
+		sprite.setOrigin(s.x / 2.f, s.y / 2.f);
+		sprite.setScale(4.f, 4.f);
+		sprite.setPosition(position);
 	}
 
 	void draw_on(sf::RenderTexture& render_target)
 	{
-		render_target.draw(circle);
+		render_target.draw(sprite);
 	}
 };
 
@@ -468,6 +469,12 @@ int main(int argc, char* argv[])
 	sf::Font font;
 	font.loadFromFile("/usr/share/fonts/TTF/DejaVuSansMono.ttf");
 
+	// load textures
+	sf::Texture bg_tex;
+	if (!load(bg_tex, "img/bg.png"))
+		return 1;
+	bg_tex.setRepeated(true);
+
 	sf::Texture inst_tex;
 	if (!load(inst_tex, "img/inst.png"))
 		return 1;
@@ -493,10 +500,17 @@ int main(int argc, char* argv[])
 		return 1;
 	rope_tex.setRepeated(true);
 
+	sf::Texture point_tex;
+	if (!load(point_tex, "img/point.png"))
+		return 1;
+
 	for (int i = 0; i < 2; ++i)
 	{
 		if (!sf::Joystick::isConnected(i))
+		{
+			std::cerr << "Need 2 joysticks\n";
 			return 1;
+		}
 	}
 
 	bool restart = true;
@@ -508,10 +522,14 @@ int main(int argc, char* argv[])
 		bool intro = true;
 		bool gameover = false;
 
-		sf::Color background {0, 0, 0};
+		sf::Sprite bg {bg_tex};
+		auto s = bg_tex.getSize();
+		bg.setScale(4.f, 4.f);
+		bg.setTextureRect(sf::IntRect{0, 0, s.x, winh * 2});
+		bg.setPosition(0, -(int)winh);
 
 		sf::Sprite inst {inst_tex};
-		auto s = inst_tex.getSize();
+		s = inst_tex.getSize();
 		inst.setOrigin(s.x / 2.f, s.y / 2.f);
 		inst.setScale(4.f, 4.f);
 		inst.setPosition(winw / 2.f, winh / 2.f);
@@ -555,17 +573,17 @@ int main(int argc, char* argv[])
 
 		std::list<Point*> points;
 		// starting points
-		points.push_back(new Point {1.f * winw / 3.f, winh - 400.f});
-		points.push_back(new Point {2.f * winw / 3.f, winh - 400.f});
+		points.push_back(new Point {1.f * winw / 3.f, winh - 400.f, point_tex});
+		points.push_back(new Point {2.f * winw / 3.f, winh - 400.f, point_tex});
 		// ladder
-		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 500.f});
-		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 650.f});
+		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 500.f, point_tex});
+		points.push_back(new Point {2.f * winw / 3.f + 80.f, winh - 650.f, point_tex});
 		// long grapple
-		points.push_back(new Point {2.f * winw / 3.f - 450.f, winh - 800.f});
+		points.push_back(new Point {2.f * winw / 3.f - 450.f, winh - 800.f, point_tex});
 
 		// segue to normal gen
-		points.push_back(new Point {winw / 2.f - 300.f, winh - 1000.f});
-		points.push_back(new Point {winw / 2.f - 150.f, winh - 1000.f});
+		points.push_back(new Point {winw / 2.f - 300.f, winh - 1000.f, point_tex});
+		points.push_back(new Point {winw / 2.f - 150.f, winh - 1000.f, point_tex});
 
 		sf::RectangleShape bomb {sf::Vector2f{70.f, 30.f}};
 		bomb.setFillColor(sf::Color{180, 180, 180});
@@ -602,8 +620,9 @@ int main(int argc, char* argv[])
 				cutscene = false;
 
 			// draw on render texture
-			render_target.clear(background);
 			render_target.setView(camera);
+			render_target.clear();
+			render_target.draw(bg);
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
@@ -635,8 +654,9 @@ int main(int argc, char* argv[])
 			camera.move((render_target.getDefaultView().getCenter() - camera.getCenter()) / 3.f);
 
 			// draw on render texture
-			render_target.clear(background);
 			render_target.setView(camera);
+			render_target.clear();
+			render_target.draw(bg);
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
@@ -691,7 +711,6 @@ int main(int argc, char* argv[])
 				for (unsigned int i = 0; i < players.size(); ++i)
 				{
 					sf::Vector2f aim {sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::X), sf::Joystick::getAxisPosition(i, sf::Joystick::Axis::Y)};
-
 					// deadzone check
 					if (norm(aim) > 50.f)
 						players[i]->aim(aim, players, points, camera);
@@ -797,7 +816,7 @@ int main(int argc, char* argv[])
 							}
 							if (!bad)
 							{
-								points.push_back(new Point {p.x, p.y});
+								points.push_back(new Point {p.x, p.y, point_tex});
 
 								if (p.y < highest_point)
 								{
@@ -844,8 +863,9 @@ int main(int argc, char* argv[])
 			}
 
 			// draw on render texture
-			render_target.clear(background);
 			render_target.setView(camera);
+			render_target.clear();
+			render_target.draw(bg);
 
 			render_target.draw(inst);
 			render_target.draw(snap);
