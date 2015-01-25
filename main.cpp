@@ -365,7 +365,8 @@ public:
 	// return distance squared from p to the ray from position to position+dir (or -1 if not near ray)
 	float dist2line(const sf::Vector2f& dir, const sf::Vector2f& p)
 	{
-		if (dot(p - position, dir) <= 0.f)
+		float dt = dot(p - position, dir) / (norm(p - position) * norm(dir));
+		if (dt <= 0.7071f)
 			return -1.f;
 		if (dist2(p, position) > max_target_dist2)
 			return -1.f;
@@ -812,7 +813,7 @@ int main(int argc, char* argv[])
 				float last_highest = highest_point;
 				int last_size = points.size();
 				// generate 1-4 more points
-				unsigned int new_points = rand() % 4 + 1;
+				unsigned int new_points = rand() % 3 + 2;
 
 				while (points.size() - last_size < new_points)
 				{
@@ -823,7 +824,8 @@ int main(int argc, char* argv[])
 						sf::Vector2f p {point->pos().x + cosf(theta) * easy_dist, point->pos().y + sinf(theta) * easy_dist};
 
 						// want it in bounds and at least one point higher than the previous
-						if (p.y < last_highest && p.x > 0.f && p.x < winw)
+						// XXX copied from Swinger class
+						if (p.y < last_highest && p.x > 200.f && p.x < winw - 200.f)
 						{
 							// make sure it isn't too close to other points
 							bool bad = false;
