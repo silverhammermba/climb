@@ -184,6 +184,7 @@ public:
 	void die()
 	{
 		--lives;
+		let_go();
 	}
 
 	bool is_grappling() const
@@ -766,9 +767,16 @@ int main(int argc, char* argv[])
 			{
 				for (auto& player : players)
 				{
-					if (player->pos().y > bottom + 500.f && !player->is_grappling())
+					if (player->pos().y > bottom + 120.f)
 					{
 						player->die();
+
+						for (auto& ps : players)
+						{
+							if (ps->target() == player)
+								ps->let_go();
+						}
+
 						if (player->get_lives() < 0)
 						{
 							if (!gameover)
