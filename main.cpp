@@ -8,8 +8,8 @@
 
 #include <SFML/Graphics.hpp>
 
-const unsigned int winw = 1600;
-const unsigned int winh = 900;
+unsigned int winw;
+unsigned int winh;
 const unsigned int game_step = 16;
 float game_time;
 sf::Vector2f gravity;
@@ -143,8 +143,14 @@ class Swinger : public Grappable
 	float half_width;
 
 	int index;
+
+	sf::Text textbox;
+	sf::Clock texttimer;
+	float texttime = -1.f;
+	sf::FloatRect textbounds;
+	sf::ConvexShape textarrow;
 public:
-	Swinger(int i, float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
+	Swinger(int i, const sf::Font& font, float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
 		: Grappable {x, 0.f}, avatar {avatar_tex}, reticle {reticle_tex}, aimbox {aimbox_tex}, rope {rope_tex}
 	{
 		index = i;
@@ -174,6 +180,23 @@ public:
 
 		max_grap_dist2 = max_grap_dist * max_grap_dist;
 		max_target_dist2 = max_target_dist * max_target_dist;
+
+		textbox.setFont(font);
+		textbox.setCharacterSize(20);
+		textarrow.setPointCount(3);
+		textarrow.setPoint(0, sf::Vector2f {0.f, 10.f});
+		textarrow.setPoint(1, sf::Vector2f {1.f, 0.f});
+		textarrow.setPoint(2, sf::Vector2f {0.f, -10.f});
+		textarrow.setFillColor(sf::Color::White);
+		textarrow.setOrigin(0.f, 5.f);
+	}
+
+	void say(const std::string& txt, float time)
+	{
+		textbox.setString(txt);
+		textbounds = textbox.getLocalBounds();
+		texttimer.restart();
+		texttime = time;
 	}
 
 	int get_lives() const
@@ -408,10 +431,28 @@ public:
 		render_target.draw(rope);
 	}
 
-	void draw_on(sf::RenderTexture& render_target)
+	void draw_on(sf::RenderTexture& render_target, const sf::View& camera)
 	{
 		avatar.setPosition(position);
 		render_target.draw(avatar);
+
+		// textbox
+		if (texttimer.getElapsedTime().asSeconds() < texttime)
+		{
+			auto& center = camera.getCenter();
+			auto& size = camera.getSize();
+
+			sf::Vector2f boxcorner {center.x - size.x + 10.f, center.y - size.y + 20.f + 2.f * half_height};
+			sf::Vector2f arrowpos = boxcorner + sf::Vector2f{textbounds.width / 2.f, textbounds.height / 2.f};
+
+			textarrow.setPosition(arrowpos);
+			textarrow.setScale(1.f, dist(arrowpos, position) / 2.f);
+			textarrow.setRotation(rad2deg(atan2f(position.y - arrowpos.y, position.x - arrowpos.x)));
+			render_target.draw(textarrow);
+
+			textbox.setPosition(position);
+			render_target.draw(textbox);
+		}
 	}
 
 	void draw_target_on(sf::RenderTexture& render_target)
@@ -442,7 +483,10 @@ public:
 
 int main(int argc, char* argv[])
 {
-	sf::RenderWindow window {sf::VideoMode {winw, winh}, "Test"};
+	sf::VideoMode mode = sf::VideoMode::getFullscreenModes()[0];
+	winw = mode.width;
+	winh = mode.height;
+	sf::RenderWindow window {mode, "TODO", sf::Style::Fullscreen};
 
 	sf::RenderTexture render_target;
 	if (!render_target.create(winw, winh))
@@ -557,6 +601,7 @@ int main(int argc, char* argv[])
 		std::vector<Swinger*> players;
 		players.push_back(new Swinger {
 			0,
+			font,
 			1.f * winw / 3.f,
 			sf::Color {203, 40, 20},
 			avatar_tex,
@@ -566,6 +611,7 @@ int main(int argc, char* argv[])
 		});
 		players.push_back(new Swinger {
 			1,
+			font,
 			2.f * winw / 3.f,
 			sf::Color {243, 166, 10},
 			avatar_tex,
@@ -623,7 +669,7 @@ int main(int argc, char* argv[])
 			sf::Event event;
 			while (window.pollEvent(event))
 			{
-				if (event.type == sf::Event::Closed)
+				if (event.type == sf::Event::Closed || event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::Escape)
 				{
 					running = false;
 					restart = false;
@@ -634,7 +680,10 @@ int main(int argc, char* argv[])
 				}
 			}
 			if (sf::Joystick::isButtonPressed(0, 7) && sf::Joystick::isButtonPressed(1, 7))
+			{
 				cutscene = false;
+				players[0]->say("Woo", 10);
+			}
 
 			// draw on render texture
 			render_target.setView(camera);
@@ -644,7 +693,7 @@ int main(int argc, char* argv[])
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
-				player->draw_on(render_target);
+				player->draw_on(render_target, camera);
 
 			// gui
 			render_target.setView(render_target.getDefaultView());
@@ -679,7 +728,7 @@ int main(int argc, char* argv[])
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
-				player->draw_on(render_target);
+				player->draw_on(render_target, camera);
 
 			// gui
 			render_target.setView(render_target.getDefaultView());
@@ -704,7 +753,7 @@ int main(int argc, char* argv[])
 			sf::Event event;
 			while (window.pollEvent(event))
 			{
-				if (event.type == sf::Event::Closed)
+				if (event.type == sf::Event::Closed || event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::Escape)
 				{
 					running = false;
 					restart = false;
@@ -912,7 +961,7 @@ int main(int argc, char* argv[])
 			for (auto& point : points)
 				point->draw_on(render_target);
 			for (auto& player : players)
-				player->draw_on(render_target);
+				player->draw_on(render_target, camera);
 			for (auto& player : players)
 				player->draw_target_on(render_target);
 
