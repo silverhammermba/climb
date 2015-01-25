@@ -152,6 +152,9 @@ class Swinger : public Grappable
 	sf::ConvexShape textarrow;
 
 	std::string name;
+
+	bool dead = false;
+	sf::Clock dead_timer;
 public:
 	Swinger(int i, const std::string& nm, const sf::Font& font, float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
 		: Grappable {x, 0.f}, name {nm}, avatar {avatar_tex}, reticle {reticle_tex}, aimbox {aimbox_tex}, rope {rope_tex}
@@ -213,7 +216,27 @@ public:
 
 	void lament(const std::string nm)
 	{
-		say(nm + "!!!!", 3);
+		int r = rand() % 5;
+		std::string l;
+		switch (r)
+		{
+			case 0:
+				l = nm + "!? " + nm + "!!!!";
+				break;
+			case 1:
+				l = nm + ", I'LL NEVER LET GO!";
+				break;
+			case 2:
+				l = nm + "! WHY????";
+				break;
+			case 3:
+				l = nm + ", I WILL TELL YOUR FAMILY THAT YOU LOVE THEM!";
+				break;
+			case 4:
+				l = "HE WAS ONLY TWO DAYS FROM RETIREMENT!";
+				break;
+		}
+		say(l, 3);
 	}
 
 	int get_lives() const
@@ -221,10 +244,32 @@ public:
 		return lives;
 	}
 
+	float get_half_height() const
+	{
+		return half_height;
+	}
+
 	void die()
 	{
 		--lives;
 		let_go();
+		dead = true;
+		dead_timer.restart();
+	}
+
+	bool is_dead() const
+	{
+		return dead;
+	}
+
+	bool need_revive() const
+	{
+		return dead && lives >= 0 && dead_timer.getElapsedTime().asSeconds() > 2.f;
+	}
+
+	void revive()
+	{
+		dead = false;
 	}
 
 	bool is_grappling() const
@@ -246,6 +291,9 @@ public:
 
 	void step()
 	{
+		if (dead)
+			return;
+
 		// nothing to do if not grappling
 		if (!grapple_target)
 		{
@@ -861,9 +909,13 @@ int main(int argc, char* argv[])
 
 			if (!gameover)
 			{
+				// kill players
 				for (auto& player : players)
 				{
-					if (player->pos().y > bottom + 120.f)
+					if (player->is_dead())
+						continue;
+
+					if (player->pos().y > bottom + 120.f || (!intro && player->pos().y >= winh - player->get_half_height()))
 					{
 						player->die();
 
@@ -892,24 +944,33 @@ int main(int argc, char* argv[])
 							continue;
 						}
 
-						for (auto it = points.rbegin(); it != points.rend(); ++it)
+					}
+				}
+
+				// revive players
+				for (auto& player : players)
+				{
+					if (!player->need_revive())
+						continue;
+
+					for (auto it = points.rbegin(); it != points.rend(); ++it)
+					{
+						if ((*it)->pos().y > top)
 						{
-							if ((*it)->pos().y > top)
+							bool good = true;
+							for (auto& pl : players)
 							{
-								bool good = true;
-								for (auto& pl : players)
+								if (pl->target() == *it)
 								{
-									if (pl->target() == *it)
-									{
-										good = false;
-										break;
-									}
-								}
-								if (good)
-								{
-									player->target(*it);
+									good = false;
 									break;
 								}
+							}
+							if (good)
+							{
+								player->target(*it);
+								player->revive();
+								break;
 							}
 						}
 					}
