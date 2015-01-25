@@ -9,7 +9,7 @@ CXXFLAGS+=-static
 endif
 
 $(EXE): main.o
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lsfml-graphics -lsfml-window -lsfml-system
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lsfml-graphics -lsfml-window -lsfml-system -lbsd
 
 clean:
 	rm -f *.o $(EXE)

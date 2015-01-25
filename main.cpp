@@ -5,6 +5,7 @@
 #include <list>
 #include <sstream>
 #include <vector>
+#include <bsd/stdlib.h>
 
 #include <SFML/Graphics.hpp>
 
@@ -15,6 +16,21 @@ float game_time;
 sf::Vector2f gravity;
 
 using std::rand;
+
+float randmf()
+{
+	return arc4random() / (float)(UINT32_MAX);
+}
+
+uint32_t randm()
+{
+	return arc4random();
+}
+
+uint32_t randm(uint32_t max)
+{
+	return arc4random_uniform(max);
+}
 
 bool load(sf::Texture& tex, const std::string& file)
 {
@@ -154,6 +170,7 @@ class Swinger : public Grappable
 	std::string name;
 
 	bool dead = false;
+	bool reviving = false;
 	sf::Clock dead_timer;
 public:
 	Swinger(int i, const std::string& nm, const sf::Font& font, float x, const sf::Color& color, const sf::Texture& avatar_tex, const sf::Texture& reticle_tex,  const sf::Texture& aimbox_tex, const sf::Texture& rope_tex)
@@ -216,7 +233,7 @@ public:
 
 	void lament(const std::string nm)
 	{
-		int r = rand() % 5;
+		int r = randm(5);
 		std::string l;
 		switch (r)
 		{
@@ -268,9 +285,15 @@ public:
 		return dead && lives >= 0 && dead_timer.getElapsedTime().asSeconds() > 2.f;
 	}
 
+	bool is_reviving() const
+	{
+		return reviving;
+	}
+
 	void revive()
 	{
 		dead = false;
+		reviving = true;
 	}
 
 	bool is_grappling() const
@@ -341,6 +364,7 @@ public:
 		{
 			grap_dist = dist(position, grapple_target->pos());
 			grappling = 2;
+			reviving = false;
 			last_target_pos = grapple_target->pos();
 			swing_vel = (position.x < grapple_target->pos().x ? 1 : -1) * ((position.y - grapple_target->pos().y) + grap_dist) * starting_swing_vel / 2.f;
 		}
@@ -475,6 +499,7 @@ public:
 
 	void let_go()
 	{
+		reviving = false;
 		grappling = 0;
 		if (grapple_target)
 			velocity += grapple_target->vel();
@@ -591,8 +616,6 @@ int main(int argc, char* argv[])
 	fx.setParameter("texture", sf::Shader::CurrentTexture);
 	fx.setParameter("winw", (float)winw);
 	fx.setParameter("winh", (float)winh);
-
-	std::srand(time(nullptr));
 
 	gravity.x = 0.f;
 	gravity.y = 0.003f;
@@ -913,7 +936,7 @@ int main(int argc, char* argv[])
 				// kill players
 				for (auto& player : players)
 				{
-					if (player->is_dead())
+					if (player->is_dead() || player->is_reviving())
 						continue;
 
 					if (player->pos().y > bottom + 120.f || (!intro && player->pos().y >= winh - player->get_half_height()))
@@ -984,17 +1007,17 @@ int main(int argc, char* argv[])
 				float last_highest = highest_point;
 				int last_size = points.size();
 				// generate 1-4 more points
-				unsigned int new_points = rand() % 3 + 2;
+				unsigned int new_points = randm(3) + 2;
 
 				while (points.size() - last_size < new_points)
 				{
 					for (auto& point : points)
 					{
 						// random angle
-						int side = rand() % 2;
-						float theta = -M_PI / 8.f - (rand() / (float)RAND_MAX) * M_PI / -8.f - (side * 5 * M_PI) / 8.f;
+						int side = randm(2);
+						float theta = -M_PI / 8.f - randmf() * M_PI / -8.f - (side * 5 * M_PI) / 8.f;
 
-						int difficulty = rand() % 2 == 0 ? easy_dist : hard_dist;
+						int difficulty = (randm(2) == 0 ? easy_dist : hard_dist);
 
 						sf::Vector2f p {point->pos().x + cosf(theta) * difficulty, point->pos().y + sinf(theta) * difficulty};
 
