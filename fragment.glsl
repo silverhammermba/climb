@@ -111,7 +111,7 @@ vec4 bloom(vec2 pix, vec4 color, float glowsize)
 
 void main()
 {
-	float n1 = snoise(gl_FragCoord.xy * 20.0 / vec2(winw, winh) + vec2(cos(time), sin(time)));
+	float n1 = snoise(gl_FragCoord.xy * 20.0 / vec2(winw, winh) + vec2(time, -time));
 	vec4 lava = vec4(1.0, 0.0, 0.0, 1.0);
 
 	// calculate normal pixels
