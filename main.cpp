@@ -8,6 +8,7 @@
 #include <bsd/stdlib.h>
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 
 unsigned int winw;
 unsigned int winh;
@@ -631,7 +632,6 @@ int main(int argc, char* argv[])
 	fx.setParameter("texture", sf::Shader::CurrentTexture);
 	fx.setParameter("winw", (float)winw);
 	fx.setParameter("winh", (float)winh);
-	fx.setParameter("start_time", -1.f);
 
 	gravity.x = 0.f;
 	gravity.y = 0.003f;
@@ -687,9 +687,15 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	sf::Music music;
+	bool have_music;
+	have_music = music.openFromFile("Jumalten short.ogg");
+
 	bool restart = true;
 	while (restart)
 	{
+		fx.setParameter("start_time", -1.f);
+
 		sf::View camera = render_target.getDefaultView();
 		float camera_speed_factor = -0.0005f;
 
@@ -755,7 +761,7 @@ int main(int argc, char* argv[])
 
 		float min_dist = 150.f;
 		float easy_dist = 350.f;
-		float hard_dist = 400.f;
+		float hard_dist = 600.f;
 
 		std::list<Point*> points;
 		// starting points
@@ -1031,7 +1037,11 @@ int main(int argc, char* argv[])
 					{
 						// random angle
 						int side = randm(2);
-						float theta = -M_PI / 8.f - randmf() * M_PI / -8.f - (side * 5 * M_PI) / 8.f;
+						float theta = (randmf() + 1.f) * M_PI / 8.f;
+						if (side)
+							theta = -theta;
+						else
+							theta = theta - M_PI;
 
 						int difficulty = (randm(2) == 0 ? easy_dist : hard_dist);
 
@@ -1088,6 +1098,8 @@ int main(int argc, char* argv[])
 					{
 						intro = false;
 						game_start_time = game_time;
+						if (have_music)
+							music.play();
 						fx.setParameter("start_time", game_start_time);
 					}
 				}
@@ -1145,6 +1157,8 @@ int main(int argc, char* argv[])
 			delete player;
 		for (auto& point : points)
 			delete point;
+
+		music.stop();
 	}
 
 	return 0;
