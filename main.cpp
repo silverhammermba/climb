@@ -145,6 +145,7 @@ class Swinger : public Grappable
 	int index;
 
 	sf::Text textbox;
+	sf::RectangleShape textboxbox;
 	sf::Clock texttimer;
 	float texttime = -1.f;
 	sf::FloatRect textbounds;
@@ -183,6 +184,9 @@ public:
 
 		textbox.setFont(font);
 		textbox.setCharacterSize(20);
+		textbox.setColor(sf::Color::Black);
+		textboxbox.setFillColor(sf::Color::White);
+		textboxbox.setOrigin(5.f, 5.f);
 		textarrow.setPointCount(3);
 		textarrow.setPoint(0, sf::Vector2f {0.f, 10.f});
 		textarrow.setPoint(1, sf::Vector2f {1.f, 0.f});
@@ -195,6 +199,7 @@ public:
 	{
 		textbox.setString(txt);
 		textbounds = textbox.getLocalBounds();
+		textboxbox.setSize(sf::Vector2f{textbounds.width + 20.f, textbounds.height + 20.f});
 		texttimer.restart();
 		texttime = time;
 	}
@@ -431,26 +436,42 @@ public:
 		render_target.draw(rope);
 	}
 
+	bool is_speaking()
+	{
+		return texttimer.getElapsedTime().asSeconds() < texttime;
+	}
+
 	void draw_on(sf::RenderTexture& render_target, const sf::View& camera)
 	{
 		avatar.setPosition(position);
 		render_target.draw(avatar);
 
 		// textbox
-		if (texttimer.getElapsedTime().asSeconds() < texttime)
+		if (is_speaking())
 		{
 			auto& center = camera.getCenter();
 			auto& size = camera.getSize();
 
-			sf::Vector2f boxcorner {center.x - size.x + 10.f, center.y - size.y + 20.f + 2.f * half_height};
-			sf::Vector2f arrowpos = boxcorner + sf::Vector2f{textbounds.width / 2.f, textbounds.height / 2.f};
+			sf::Vector2f boxcorner {0.f, center.y - size.y / 2.f + 20.f + 2.f * half_height};
+			if (index)
+			{
+				boxcorner.x = center.x + size.x / 2.f - 15.f - textbounds.width;
+			}
+			else
+			{
+				boxcorner.x = center.x - size.x / 2.f + 10.f;
+			}
+			sf::Vector2f boxcenter = boxcorner + sf::Vector2f{textbounds.width / 2.f, textbounds.height / 2.f};
 
-			textarrow.setPosition(arrowpos);
-			textarrow.setScale(1.f, dist(arrowpos, position) / 2.f);
-			textarrow.setRotation(rad2deg(atan2f(position.y - arrowpos.y, position.x - arrowpos.x)));
+			textboxbox.setPosition(boxcorner);
+			render_target.draw(textboxbox);
+
+			textarrow.setPosition(boxcenter);
+			textarrow.setScale(dist(boxcenter, position) / 2.f, 1.f);
+			textarrow.setRotation(rad2deg(atan2f(position.y - boxcenter.y, position.x - boxcenter.x)));
 			render_target.draw(textarrow);
 
-			textbox.setPosition(position);
+			textbox.setPosition(boxcorner);
 			render_target.draw(textbox);
 		}
 	}
@@ -663,6 +684,7 @@ int main(int argc, char* argv[])
 
 		bool running = true;
 		bool cutscene = true;
+		int cutphase = 0;
 		while (cutscene && running)
 		{
 			// input
@@ -679,10 +701,21 @@ int main(int argc, char* argv[])
 					running = false;
 				}
 			}
-			if (sf::Joystick::isButtonPressed(0, 7) && sf::Joystick::isButtonPressed(1, 7))
+			if (cutphase == 0 && sf::Joystick::isButtonPressed(0, 7) && sf::Joystick::isButtonPressed(1, 7))
+			{
+				players[0]->say("FRANK! THE FLOOR IS LAVA!", 2);
+				cutphase = 1;
+			}
+
+			if (cutphase == 1 && !players[0]->is_speaking())
+			{
+				players[1]->say("GIUSEPPE! WHAT DO WE DO NOW?", 2);
+				cutphase = 2;
+			}
+
+			if (cutphase == 2 && !players[1]->is_speaking())
 			{
 				cutscene = false;
-				players[0]->say("Woo", 10);
 			}
 
 			// draw on render texture
