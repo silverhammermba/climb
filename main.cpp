@@ -156,7 +156,7 @@ class Swinger : public Grappable
 
 	sf::Vector2f last_target_pos;
 
-	int lives = 3;
+	int lives = 2;
 
 	float half_height;
 	float half_width;
