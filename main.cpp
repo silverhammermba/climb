@@ -404,8 +404,11 @@ public:
 	}
 
 	// aim and find nearest grapple to aim
-	float aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::list<Point*>& points, const sf::View& camera)
+	void aim(const sf::Vector2f& dir, const std::vector<Swinger*>& players, const std::list<Point*>& points, const sf::View& camera)
 	{
+		if (dead)
+			return;
+
 		float theta = atan2f(dir.y, dir.x);
 		aimbox.setRotation(rad2deg(theta));
 		aiming = true;
@@ -481,8 +484,6 @@ public:
 				ndist2 = ldist2;
 			}
 		}
-
-		return theta;
 	}
 
 	void stop_aim()
@@ -508,6 +509,8 @@ public:
 
 	void grapple()
 	{
+		if (dead)
+			return;
 		if (nearest)
 			target(nearest);
 	}
@@ -605,11 +608,20 @@ public:
 
 int main(int argc, char* argv[])
 {
+	for (int i = 0; i < 2; ++i)
+	{
+		if (!sf::Joystick::isConnected(i))
+		{
+			std::cerr << "Need 2 joysticks\n";
+			//return 1;
+		}
+	}
+
 	srand(time(nullptr));
-	sf::VideoMode mode = sf::VideoMode::getFullscreenModes()[0];
-	winw = mode.width;
-	winh = mode.height;
-	sf::RenderWindow window {mode, "Viking Climb", sf::Style::Fullscreen};
+	//sf::VideoMode mode = sf::VideoMode::getFullscreenModes()[0];
+	winw = 1600;
+	winh = 900;
+	sf::RenderWindow window {sf::VideoMode {winw, winh}, "Viking Climb"};
 
 	sf::RenderTexture render_target;
 	if (!render_target.create(winw, winh))
@@ -681,15 +693,6 @@ int main(int argc, char* argv[])
 	sf::Texture point_tex;
 	if (!load(point_tex, "img/point.png"))
 		return 1;
-
-	for (int i = 0; i < 2; ++i)
-	{
-		if (!sf::Joystick::isConnected(i))
-		{
-			std::cerr << "Need 2 joysticks\n";
-			return 1;
-		}
-	}
 
 	sf::Music music;
 	bool have_music;
