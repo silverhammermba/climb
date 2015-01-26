@@ -281,6 +281,7 @@ public:
 	{
 		--lives;
 		let_go();
+		stop_aim();
 		texttime = -1.f;
 		dead = true;
 		dead_timer.restart();
